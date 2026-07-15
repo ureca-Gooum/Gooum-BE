@@ -1,21 +1,18 @@
-import express, { Request, Response } from "express";
-import dotenv from "dotenv";
-
-dotenv.config();
+import express from "express";
+import swaggerUi from "swagger-ui-express";
+import { env } from "./core/config/env";
+import { swaggerSpec } from "./core/config/swagger";
 
 const app = express();
-// Azure가 임의로 부여하는 포트(process.env.PORT)를 우선적으로 사용하도록 설정!
-const PORT = process.env.PORT || 8000;
-
 app.use(express.json());
 
-// 배포 테스트용 핑 API
-app.get("/ping", (req: Request, res: Response) => {
-    res.status(200).json({
-        message: "pong! Node.js TS server is running on Azure!",
-    });
+// 루트로 들어오면 스웨거로 리다이렉트
+app.get("/", (req, res) => {
+    res.redirect("/api-docs");
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.listen(env.PORT, () => {
+    console.log(`🚀 Server is running on port ${env.PORT}`);
 });
