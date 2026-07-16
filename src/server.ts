@@ -1,18 +1,25 @@
+import "./core/config/dns";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
-import { env } from "./core/config/env";
+import { env, loadSecrets } from "./core/config/env";
 import { swaggerSpec } from "./core/config/swagger";
+import { connectDB } from "./core/db/mongoose";
 
 const app = express();
 app.use(express.json());
 
-// 루트로 들어오면 스웨거로 리다이렉트
 app.get("/", (req, res) => {
     res.redirect("/api-docs");
 });
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.listen(env.PORT, () => {
-    console.log(`🚀 Server is running on port ${env.PORT}`);
-});
+const startServer = async () => {
+    await loadSecrets(); // 1. Key Vault에서 시크릿 로드 (배포 환경만)
+    await connectDB(); // 2. DB 연결
+    app.listen(env.PORT, () => {
+        console.log(`🚀 Server is running on port ${env.PORT}`);
+    });
+};
+
+startServer();
