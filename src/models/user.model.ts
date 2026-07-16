@@ -50,7 +50,7 @@ const userSchema = new Schema<IUser>(
         theme: {
             mode: { type: String, enum: ["light", "dark"], default: "light" },
         },
-        refresh_token: { type: String, default: null },
+        refresh_token: { type: String, default: undefined },
     },
     {
         timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

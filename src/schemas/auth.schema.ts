@@ -5,3 +5,16 @@ export const loginSchema = z.object({
 });
 
 export type LoginDto = z.infer<typeof loginSchema>;
+
+export interface LoginResponse {
+    accessToken: string;
+    userId: string;
+    name: string;
+    theme: string;
+    profileImageUrl: string | null;
+    isNewUser: boolean;
+}
+
+export interface LogoutResponse {
+    message: string;
+}
