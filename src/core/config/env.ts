@@ -10,11 +10,15 @@ const settings: Record<string, string> = {
     KEY_VAULT_URL: process.env.KEY_VAULT_URL || "",
     JWT_SECRET_KEY: process.env.JWT_SECRET_KEY || "",
     JWT_ALGORITHM: process.env.JWT_ALGORITHM || "",
+    ACCESS_TOKEN_EXPIRE_MINUTES:
+        process.env.ACCESS_TOKEN_EXPIRE_MINUTES || "30",
+    REFRESH_TOKEN_EXPIRE_DAYS: process.env.REFRESH_TOKEN_EXPIRE_DAYS || "7",
     DOCUMENT_DB_CONNECTION_STRING:
         process.env.DOCUMENT_DB_CONNECTION_STRING || "",
     DOCUMENT_DATABASE_NAME: process.env.DOCUMENT_DATABASE_NAME || "",
     KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || "",
     KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || "",
+    KAKAO_REDIRECT_URI: process.env.KAKAO_REDIRECT_URI || "",
 };
 
 // 배포 환경이면 Key Vault에서 시크릿 가져와서 덮어쓰기
