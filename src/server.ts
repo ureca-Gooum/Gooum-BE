@@ -6,8 +6,16 @@ import { env, loadSecrets } from "./core/config/env";
 import { swaggerSpec } from "./core/config/swagger";
 import { connectDB } from "./core/db/mongoose";
 import authRoutes from "./api/routes/auth.route";
+import cors from "cors";
+import { core } from "zod";
 
 const app = express();
+app.use(
+    cors({
+        origin: "http://localhost:5173", // 프론트 주소 (Vite 기본 포트)
+        credentials: true, // 쿠키 전달 허용
+    }),
+);
 app.use(express.json());
 app.use(cookieParser());
 
