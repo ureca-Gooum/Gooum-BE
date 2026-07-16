@@ -8,15 +8,12 @@ interface KakaoTokenResponse {
 interface KakaoUserInfo {
     id: number;
     kakao_account?: {
-        email?: string;
         profile?: {
             nickname?: string;
-            profile_image_url?: string;
         };
     };
 }
 
-// 인가 코드 → 카카오 액세스 토큰
 export const getKakaoToken = async (code: string): Promise<string> => {
     const { data } = await axios.post<KakaoTokenResponse>(
         "https://kauth.kakao.com/oauth/token",
@@ -35,7 +32,6 @@ export const getKakaoToken = async (code: string): Promise<string> => {
     return data.access_token;
 };
 
-// 카카오 액세스 토큰 → 유저 정보
 export const getKakaoUserInfo = async (
     accessToken: string,
 ): Promise<KakaoUserInfo> => {

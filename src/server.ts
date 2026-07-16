@@ -5,26 +5,29 @@ import swaggerUi from "swagger-ui-express";
 import { env, loadSecrets } from "./core/config/env";
 import { swaggerSpec } from "./core/config/swagger";
 import { connectDB } from "./core/db/mongoose";
+import { errorHandler } from "./core/middlewares/errorHandler";
 import authRoutes from "./api/routes/auth.route";
 import cors from "cors";
-import { core } from "zod";
 
 const app = express();
+
 app.use(
     cors({
-        origin: "http://localhost:5173", // 프론트 주소 (Vite 기본 포트)
-        credentials: true, // 쿠키 전달 허용
+        origin:
+            env.NODE_ENV === "production"
+                ? "https://gooum-green.vercel.app"
+                : "http://localhost:5173",
+        credentials: true,
     }),
 );
 app.use(express.json());
 app.use(cookieParser());
 
-app.get("/", (req, res) => {
-    res.redirect("/api-docs");
-});
-
+app.get("/", (req, res) => res.redirect("/api-docs"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/auth", authRoutes);
+
+app.use(errorHandler);
 
 const startServer = async () => {
     await loadSecrets();

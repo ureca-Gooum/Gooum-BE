@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { env } from "../config/env";
+import { verifyToken } from "../security/jwt";
+import { UserModel } from "../../models/user.model";
 
-export const authMiddleware = (
+export const authMiddleware = async (
     req: Request,
     res: Response,
     next: NextFunction,
@@ -16,10 +16,24 @@ export const authMiddleware = (
 
     try {
         const token = authHeader.split(" ")[1];
-        const decoded = jwt.verify(token, env.JWT_SECRET_KEY);
-        (req as any).user = decoded;
+        const payload = verifyToken(token);
+        const userId = payload.userId;
+
+        if (!userId) {
+            res.status(401).json({ detail: "유효하지 않은 토큰이에요." });
+            return;
+        }
+
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            res.status(404).json({ detail: "유저를 찾을 수 없어요." });
+            return;
+        }
+
+        // types/express/index.d.ts에서 타입 확장했으므로 as any 불필요
+        req.user = { userId: user._id.toString(), name: user.name };
         next();
     } catch (err) {
-        res.status(401).json({ detail: "유효하지 않은 토큰입니다." });
+        res.status(401).json({ detail: "유효하지 않은 토큰이에요." });
     }
 };
