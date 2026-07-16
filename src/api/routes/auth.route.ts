@@ -8,6 +8,8 @@ const router = Router();
  * @swagger
  * /api/auth/login:
  *   post:
+ *     tags:
+ *       - Auth
  *     summary: 카카오 로그인
  *     requestBody:
  *       required: true
@@ -31,6 +33,8 @@ router.post("/login", loginHandler);
  * @swagger
  * /api/auth/logout:
  *   post:
+ *     tags:
+ *       - Auth
  *     summary: 로그아웃
  *     security:
  *       - bearerAuth: []
