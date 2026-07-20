@@ -1,0 +1,62 @@
+import { UserModel, IUser } from "../models/user.model";
+import { createAccessToken, createRefreshToken } from "../core/security/jwt";
+import { getKakaoToken, getKakaoUserInfo } from "./kakao.service";
+
+interface LoginResult {
+    accessToken: string;
+    refreshToken: string;
+    userId: string;
+    name: string;
+    theme: string;
+    profileImageUrl: string | null;
+    isNewUser: boolean;
+}
+
+export const login = async (code: string): Promise<LoginResult> => {
+    const kakaoAccessToken = await getKakaoToken(code);
+
+    const kakaoUser = await getKakaoUserInfo(kakaoAccessToken);
+    const kakaoId = kakaoUser.id.toString();
+    const name = kakaoUser.kakao_account?.profile?.nickname || "사용자";
+
+    const { user, isNewUser } = await findOrCreateUser(kakaoId, name);
+
+    const accessToken = createAccessToken({ userId: user._id });
+    const refreshToken = createRefreshToken({ userId: user._id });
+
+    user.refresh_token = refreshToken;
+    await user.save();
+
+    return {
+        accessToken,
+        refreshToken,
+        userId: user._id.toString(),
+        name: user.name,
+        theme: user.theme?.mode || "light",
+        profileImageUrl: user.profile_image_url || null,
+        isNewUser,
+    };
+};
+
+const findOrCreateUser = async (
+    kakaoId: string,
+    name: string,
+): Promise<{ user: IUser; isNewUser: boolean }> => {
+    const existingUser = await UserModel.findOne({ kakao_id: kakaoId });
+
+    if (existingUser) {
+        return { user: existingUser, isNewUser: false };
+    }
+
+    const newUser = await UserModel.create({
+        kakao_id: kakaoId,
+        name,
+        presence: { status: "online" },
+    });
+
+    return { user: newUser, isNewUser: true };
+};
+
+export const removeRefreshToken = async (userId: string) => {
+    await UserModel.findByIdAndUpdate(userId, { refresh_token: null });
+};
