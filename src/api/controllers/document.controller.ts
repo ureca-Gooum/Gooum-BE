@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { createDocument, getDocuments } from "../../services/document.service";
+import {
+    createDocument,
+    getDocumentDetail,
+    getDocuments,
+} from "../../services/document.service";
 import { createDocumentsSchema } from "../../schemas/document.schema";
 
 export const createDocumentHandler = async (
@@ -25,6 +29,22 @@ export const getDocumentsHandler = async (
         const roomId = req.query.roomId as string | undefined;
         const type = req.query.type as string | undefined;
         const result = await getDocuments(req.user!.userId, roomId, type);
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const getDocumentDetailHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result = await getDocumentDetail(
+            req.params.documentId,
+            req.user!.userId,
+        );
         res.status(200).json(result);
     } catch (err) {
         next(err);

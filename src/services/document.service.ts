@@ -40,16 +40,7 @@ export const createDocument = async (
         document_id: document._id,
     });
 
-    // TODO: getDocumentDetail로 교체 예정
-    return {
-        documentId: document._id.toString(),
-        title: document.title,
-        type: document.type,
-        roomId: document.room_id.toString(),
-        content: null,
-        createdAt: document.created_at,
-        updatedAt: document.updated_at,
-    };
+    return await getDocumentDetail(document._id.toString(), userId);
 };
 
 // 문서 목록 조회
@@ -88,4 +79,41 @@ export const getDocuments = async (
     }
 
     return { documents: result, total: result.length };
+};
+
+// 문서 상세 조회
+export const getDocumentDetail = async (documentId: string, userId: string) => {
+    const document = await DocumentModel.findById(documentId);
+    if (!document) throw { statusCode: 404, message: "문서를 찾을 수 없어요." };
+
+    // collaborators에 포함되어 있는지 확인
+    const isCollaborator = document.collaborators.some(
+        (id) => id.toString() === userId,
+    );
+    if (!isCollaborator)
+        throw { statusCode: 403, message: "이 문서에 접근 권한이 없어요." };
+
+    const collaboratorUsers = await UserModel.find({
+        _id: { $in: document.collaborators },
+    });
+
+    const createdByUser = await UserModel.findById(document.created_by);
+
+    return {
+        documentId: document._id.toString(),
+        title: document.title,
+        type: document.type,
+        roomId: document.room_id.toString(),
+        content: document.content || null,
+        collaborators: collaboratorUsers.map((u) => ({
+            userId: u._id.toString(),
+            name: u.name,
+        })),
+        createdBy: {
+            userId: createdByUser?._id.toString(),
+            name: createdByUser?.name,
+        },
+        createdAt: document.created_at,
+        updatedAt: document.updated_at,
+    };
 };
