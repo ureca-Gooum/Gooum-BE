@@ -8,7 +8,6 @@ interface IPresence {
 interface INotificationSettings {
     message: boolean;
     mention: boolean;
-    channel: boolean;
 }
 
 interface ITheme {
@@ -21,8 +20,8 @@ export interface IUser extends Document {
     status_message?: string;
     profile_image_url?: string;
     presence: IPresence;
-    notification_settings?: INotificationSettings;
-    theme?: ITheme;
+    notification_settings: INotificationSettings;
+    theme: ITheme;
     refresh_token?: string;
     created_at: Date;
     updated_at: Date;
@@ -45,7 +44,6 @@ const userSchema = new Schema<IUser>(
         notification_settings: {
             message: { type: Boolean, default: true },
             mention: { type: Boolean, default: true },
-            channel: { type: Boolean, default: true },
         },
         theme: {
             mode: { type: String, enum: ["light", "dark"], default: "light" },
