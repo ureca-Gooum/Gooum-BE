@@ -3,7 +3,10 @@ import { MessageModel } from "../models/message.model";
 import { RoomMemberModel } from "../models/room-member.model";
 import { RoomModel } from "../models/room.model";
 import { UserModel } from "../models/user.model";
-import { CreateDocumentDto } from "../schemas/document.schema";
+import {
+    CreateDocumentDto,
+    UpdateDocumentDto,
+} from "../schemas/document.schema";
 
 // 문서 생성
 export const createDocument = async (
@@ -114,6 +117,32 @@ export const getDocumentDetail = async (documentId: string, userId: string) => {
             name: createdByUser?.name,
         },
         createdAt: document.created_at,
+        updatedAt: document.updated_at,
+    };
+};
+
+// 문서 저장 (자동 저장)
+export const updateDocument = async (
+    documentId: string,
+    userId: string,
+    data: UpdateDocumentDto,
+) => {
+    const document = await DocumentModel.findById(documentId);
+    if (!document) throw { statusCode: 404, message: "문서를 찾을 수 없어요." };
+
+    const isCollaborator = document.collaborators.some(
+        (id) => id.toString() === userId,
+    );
+    if (!isCollaborator)
+        throw { statusCode: 403, message: "이 문서에 접근 권한이 없어요." };
+
+    if (data.title) document.title = data.title;
+    if (data.content) document.content = data.content;
+    await document.save();
+
+    return {
+        documentId: document._id.toString(),
+        title: document.title,
         updatedAt: document.updated_at,
     };
 };

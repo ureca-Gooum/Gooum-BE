@@ -7,3 +7,11 @@ export const createDocumentsSchema = z.object({
 });
 
 export type CreateDocumentDto = z.infer<typeof createDocumentsSchema>;
+
+// PATCH /api/documents/:id 요청 검증
+export const updateDocumentSchema = z.object({
+    title: z.string().optional(),
+    content: z.any().optional(),
+});
+
+export type UpdateDocumentDto = z.infer<typeof updateDocumentSchema>;

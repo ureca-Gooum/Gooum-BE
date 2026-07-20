@@ -4,6 +4,7 @@ import {
     createDocumentHandler,
     getDocumentDetailHandler,
     getDocumentsHandler,
+    updateDocumentHandler,
 } from "../controllers/document.controller";
 
 const router = Router();
@@ -87,5 +88,40 @@ router.get("/", authMiddleware, getDocumentsHandler);
  *         description: 문서 없음
  */
 router.get("/:documentId", authMiddleware, getDocumentDetailHandler);
+
+/**
+ * @swagger
+ * /api/documents/{documentId}:
+ *   patch:
+ *     tags:
+ *       - Documents
+ *     summary: 문서 저장 (자동 저장)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: documentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               content:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 저장 성공
+ *       403:
+ *         description: 접근 권한 없음
+ *       404:
+ *         description: 문서 없음
+ */
+router.patch("/:documentId", authMiddleware, updateDocumentHandler);
 
 export default router;

@@ -3,8 +3,12 @@ import {
     createDocument,
     getDocumentDetail,
     getDocuments,
+    updateDocument,
 } from "../../services/document.service";
-import { createDocumentsSchema } from "../../schemas/document.schema";
+import {
+    createDocumentsSchema,
+    updateDocumentSchema,
+} from "../../schemas/document.schema";
 
 export const createDocumentHandler = async (
     req: Request,
@@ -44,6 +48,24 @@ export const getDocumentDetailHandler = async (
         const result = await getDocumentDetail(
             req.params.documentId,
             req.user!.userId,
+        );
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const updateDocumentHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const data = updateDocumentSchema.parse(req.body);
+        const result = await updateDocument(
+            req.params.documentId,
+            req.user!.userId,
+            data,
         );
         res.status(200).json(result);
     } catch (err) {
