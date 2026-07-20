@@ -196,3 +196,22 @@ export const leaveRoom = async (roomId: string, userId: string) => {
         await MessageModel.deleteMany({ room_id: roomId });
     }
 };
+
+// 즐겨찾기 토글
+export const toggleFavorite = async (
+    roomId: string,
+    userId: string,
+    isFavorite: boolean,
+) => {
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    membership.is_favorite = isFavorite;
+    await membership.save();
+
+    return await getRoomDetail(roomId, userId);
+};

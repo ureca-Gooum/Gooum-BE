@@ -4,6 +4,7 @@ import {
     getMyRoomsHandler,
     getRoomDetailHandler,
     leaveRoomHandler,
+    toggleFavoriteHandler,
 } from "../controllers/room.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
@@ -106,3 +107,33 @@ router.get("/:roomId", authMiddleware, getRoomDetailHandler);
  *         description: 채팅방 없음
  */
 router.delete("/:roomId", authMiddleware, leaveRoomHandler);
+
+/**
+ * @swagger
+ * /api/rooms/{roomId}/favorite:
+ *   patch:
+ *     tags:
+ *       - Rooms
+ *     summary: 채팅방 즐겨찾기 토글
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               isFavorite:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
+router.patch("/:roomId/favorite", authMiddleware, toggleFavoriteHandler);

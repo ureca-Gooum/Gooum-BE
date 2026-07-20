@@ -8,3 +8,10 @@ export const createRoomSchema = z.object({
 });
 
 export type CreateRoomDto = z.infer<typeof createRoomSchema>;
+
+// PATCH /api/rooms/:id/favorite 요청 검증
+export const favoriteSchema = z.object({
+    isFavorite: z.boolean(),
+});
+
+export type FavoriteDto = z.infer<typeof favoriteSchema>;

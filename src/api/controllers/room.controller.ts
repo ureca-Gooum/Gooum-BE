@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import { createRoomSchema } from "../../schemas/room.schema";
+import { createRoomSchema, favoriteSchema } from "../../schemas/room.schema";
 import {
     createRoom,
     getMyRooms,
     getRoomDetail,
     leaveRoom,
+    toggleFavorite,
 } from "../../services/room.service";
 
 export const createRoomHandler = async (
@@ -55,6 +56,24 @@ export const leaveRoomHandler = async (
     try {
         await leaveRoom(req.params.roomId, req.user!.userId);
         res.status(200).json({ message: "채팅방에서 나갔어요." });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const toggleFavoriteHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const { isFavorite } = favoriteSchema.parse(req.body);
+        const result = await toggleFavorite(
+            req.params.roomId,
+            req.user!.userId,
+            isFavorite,
+        );
+        res.status(200).json(result);
     } catch (err) {
         next(err);
     }
