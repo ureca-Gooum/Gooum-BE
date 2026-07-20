@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { createRoomHandler } from "../controllers/room.controller";
+import {
+    createRoomHandler,
+    getMyRoomsHandler,
+} from "../controllers/room.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
@@ -38,3 +41,18 @@ const router = Router();
 router.post("/", authMiddleware, createRoomHandler);
 
 export default router;
+
+/**
+ * @swagger
+ * /api/rooms:
+ *   get:
+ *     tags:
+ *       - Rooms
+ *     summary: 내 채팅방 목록 조회
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
+router.get("/", authMiddleware, getMyRoomsHandler);

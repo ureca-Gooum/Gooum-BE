@@ -1,5 +1,7 @@
+import { MessageModel } from "../models/message.model";
 import { RoomMemberModel } from "../models/room-member.model";
 import { RoomModel } from "../models/room.model";
+import { UserModel } from "../models/user.model";
 import { CreateRoomDto } from "../schemas/room.schema";
 
 // 채팅방 생성
@@ -64,4 +66,71 @@ export const createRoom = async (userId: string, data: CreateRoomDto) => {
         memberCount: allMemberIds.length,
         lastMessage: null,
     };
+};
+
+// 내 채팅방 목록 조회
+export const getMyRooms = async (userId: string) => {
+    const myMemberships = await RoomMemberModel.find({ user_id: userId });
+
+    const rooms = [];
+    for (const membership of myMemberships) {
+        const room = await RoomModel.findById(membership.room_id);
+        if (!room) continue;
+
+        // 멤버 정보 조회
+        const members = await RoomMemberModel.find({ room_id: room._id });
+        const memberUsers = await UserModel.find({
+            _id: { $in: members.map((m) => m.user_id) },
+        });
+
+        // 본인 제회 멤버 목록
+        const otherMembers = memberUsers
+            .filter((u) => u._id.toString() !== userId)
+            .map((u) => {
+                const memberInfo: any = {
+                    userId: u._id.toString(),
+                    name: u.name,
+                    profileImageUrl: u.profile_image_url || null,
+                };
+
+                // 1:1이면 상대방 프레즌스 포함
+                if (room.type === "direct") {
+                    memberInfo.presence = {
+                        status: u.presence?.status || "offline",
+                    };
+                }
+                return memberInfo;
+            });
+
+        // 안 읽은 메세지 수
+        const unreadCount = await MessageModel.countDocuments({
+            room_id: room._id,
+            created_at: { $gt: membership.last_read_at },
+        });
+
+        rooms.push({
+            roomId: room._id.toString(),
+            type: room.type,
+            name: room.name || null,
+            members: otherMembers,
+            memberCount: memberUsers.length,
+            lastMessage: room.last_message
+                ? {
+                      content: room.last_message.content,
+                      sentAt: room.last_message.sent_at,
+                  }
+                : null,
+            unreadCount,
+            isFavorite: membership.is_favorite,
+        });
+    }
+
+    // 마지막 메세지 시각 기준 정렬
+    rooms.sort((a, b) => {
+        const aTime = a.lastMessage?.sentAt?.getTime() || 0;
+        const bTime = a.lastMessage?.sentAt?.getTime() || 0;
+        return bTime - aTime;
+    });
+
+    return { rooms, total: rooms.length };
 };
