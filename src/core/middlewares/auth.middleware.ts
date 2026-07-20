@@ -10,7 +10,7 @@ export const authMiddleware = async (
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        res.status(401).json({ detail: "인증이 필요합니다." });
+        res.status(401).json({ message: "인증이 필요합니다." });
         return;
     }
 
@@ -20,13 +20,13 @@ export const authMiddleware = async (
         const userId = payload.userId;
 
         if (!userId) {
-            res.status(401).json({ detail: "유효하지 않은 토큰이에요." });
+            res.status(401).json({ message: "유효하지 않은 토큰이에요." });
             return;
         }
 
         const user = await UserModel.findById(userId);
         if (!user) {
-            res.status(404).json({ detail: "유저를 찾을 수 없어요." });
+            res.status(404).json({ message: "유저를 찾을 수 없어요." });
             return;
         }
 
@@ -34,6 +34,6 @@ export const authMiddleware = async (
         req.user = { userId: user._id.toString(), name: user.name };
         next();
     } catch (err) {
-        res.status(401).json({ detail: "유효하지 않은 토큰이에요." });
+        res.status(401).json({ message: "유효하지 않은 토큰이에요." });
     }
 };

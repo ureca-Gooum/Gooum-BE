@@ -7,6 +7,7 @@ import { swaggerSpec } from "./core/config/swagger";
 import { connectDB } from "./core/db/mongoose";
 import { errorHandler } from "./core/middlewares/errorHandler";
 import authRoutes from "./api/routes/auth.route";
+import roomRoutes from "./api/routes/room.route";
 import cors from "cors";
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(cookieParser());
 app.get("/", (req, res) => res.redirect("/api-docs"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/auth", authRoutes);
+app.use("/api/rooms", roomRoutes);
 
 app.use(errorHandler);
 
