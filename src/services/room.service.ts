@@ -134,3 +134,54 @@ export const getMyRooms = async (userId: string) => {
 
     return { rooms, total: rooms.length };
 };
+
+// 채팅방 상세 조회
+export const getRoomDetail = async (roomId: string, userId: string) => {
+    const room = await RoomModel.findById(roomId);
+    if (!room) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    const members = await RoomMemberModel.find({ room_id: roomId });
+    const memberUsers = await UserModel.find({
+        _id: { $in: members.map((m) => m.user_id) },
+    });
+
+    const memberList = memberUsers.map((u) => ({
+        userId: u._id.toString(),
+        name: u.name,
+        profileImageUrl: u.profile_image_url || null,
+        presence: {
+            status: u.presence?.status || "offline",
+            lastSeenAt: u.presence?.last_seen_at || null,
+        },
+    }));
+
+    const unreadCount = await MessageModel.countDocuments({
+        room_id: roomId,
+        created_at: { $gt: membership.last_read_at },
+    });
+
+    return {
+        roomId: room._id.toString(),
+        type: room.type,
+        name: room.name || null,
+        members: memberList,
+        memberCount: memberUsers.length,
+        createdBy: room.created_by.toString(),
+        lastMessage: room.last_message
+            ? {
+                  content: room.last_message.content,
+                  sentAt: room.last_message.sent_at,
+              }
+            : null,
+        unreadCount,
+        isFavorite: membership.is_favorite,
+        createdAt: room.created_at,
+    };
+};

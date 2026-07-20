@@ -29,7 +29,7 @@ export const loginHandler = async (
         });
     } catch (err: any) {
         if (err.response?.status === 401 || err.response?.data) {
-            res.status(401).json({ detail: "카카오 인증에 실패했어요." });
+            res.status(401).json({ message: "카카오 인증에 실패했어요." });
             return;
         }
         next(err);

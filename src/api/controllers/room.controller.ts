@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { createRoomSchema } from "../../schemas/room.schema";
-import { createRoom, getMyRooms } from "../../services/room.service";
+import {
+    createRoom,
+    getMyRooms,
+    getRoomDetail,
+} from "../../services/room.service";
 
 export const createRoomHandler = async (
     req: Request,
@@ -23,6 +27,19 @@ export const getMyRoomsHandler = async (
 ) => {
     try {
         const result = await getMyRooms(req.user!.userId);
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const getRoomDetailHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result = await getRoomDetail(req.params.roomId, req.user!.userId);
         res.status(200).json(result);
     } catch (err) {
         next(err);
