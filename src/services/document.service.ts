@@ -146,3 +146,22 @@ export const updateDocument = async (
         updatedAt: document.updated_at,
     };
 };
+
+// 문서 삭제
+export const deleteDocument = async (documentId: string, userId: string) => {
+    const document = await DocumentModel.findById(documentId);
+    if (!document) throw { statusCode: 404, message: "문서를 찾을 수 없어요." };
+
+    if (document.created_by.toString() !== userId) {
+        throw { statusCode: 403, message: "문서 생성자만 삭제할 수 있어요." };
+    }
+
+    // 문서 삭제
+    await DocumentModel.findByIdAndDelete(documentId);
+
+    // 관련 메시지 소프트 삭제
+    await MessageModel.updateMany(
+        { document_id: documentId },
+        { is_deleted: true, content: null },
+    );
+};

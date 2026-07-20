@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 import {
     createDocumentHandler,
+    deleteDocumentHandler,
     getDocumentDetailHandler,
     getDocumentsHandler,
     updateDocumentHandler,
@@ -123,5 +124,30 @@ router.get("/:documentId", authMiddleware, getDocumentDetailHandler);
  *         description: 문서 없음
  */
 router.patch("/:documentId", authMiddleware, updateDocumentHandler);
+
+/**
+ * @swagger
+ * /api/documents/{documentId}:
+ *   delete:
+ *     tags:
+ *       - Documents
+ *     summary: 문서 삭제
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: documentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 삭제 성공
+ *       403:
+ *         description: 생성자만 삭제 가능
+ *       404:
+ *         description: 문서 없음
+ */
+router.delete("/:documentId", authMiddleware, deleteDocumentHandler);
 
 export default router;

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import {
     createDocument,
+    deleteDocument,
     getDocumentDetail,
     getDocuments,
     updateDocument,
@@ -68,6 +69,19 @@ export const updateDocumentHandler = async (
             data,
         );
         res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const deleteDocumentHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        await deleteDocument(req.params.documentId, req.user!.userId);
+        res.status(200).json({ message: "문서가 삭제되었어요." });
     } catch (err) {
         next(err);
     }
