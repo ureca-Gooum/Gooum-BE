@@ -1,5 +1,6 @@
 import "./core/config/dns";
 import express from "express";
+import { createServer } from "http";
 import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import { env, loadSecrets } from "./core/config/env";
@@ -9,6 +10,7 @@ import { errorHandler } from "./core/middlewares/errorHandler";
 import authRoutes from "./api/routes/auth.route";
 import roomRoutes from "./api/routes/room.route";
 import documentRoutes from "./api/routes/document.route";
+import { setupYWebSocket } from "./socket/yws.handler";
 import cors from "cors";
 
 const app = express();
@@ -36,8 +38,15 @@ app.use(errorHandler);
 const startServer = async () => {
     await loadSecrets();
     await connectDB();
-    app.listen(env.PORT, () => {
-        console.log(`🚀 Server is running on port ${env.PORT}`);
+
+    const httpServer = createServer(app);
+
+    await setupYWebSocket(httpServer);
+
+    const port = Number(process.env.PORT) || Number(env.PORT);
+
+    httpServer.listen(port, () => {
+        console.log(`🚀 Server is running on port ${port}`);
     });
 };
 
