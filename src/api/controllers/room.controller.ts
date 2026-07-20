@@ -4,6 +4,7 @@ import {
     createRoom,
     getMyRooms,
     getRoomDetail,
+    leaveRoom,
 } from "../../services/room.service";
 
 export const createRoomHandler = async (
@@ -41,6 +42,19 @@ export const getRoomDetailHandler = async (
     try {
         const result = await getRoomDetail(req.params.roomId, req.user!.userId);
         res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const leaveRoomHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        await leaveRoom(req.params.roomId, req.user!.userId);
+        res.status(200).json({ message: "채팅방에서 나갔어요." });
     } catch (err) {
         next(err);
     }

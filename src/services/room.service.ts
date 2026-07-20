@@ -33,7 +33,6 @@ export const createRoom = async (userId: string, data: CreateRoomDto) => {
                     user_id: data.memberIds[0],
                 });
 
-                // TODO : 추후 getRoomDetail로 수정해야 함
                 if (otherMember) {
                     return await getRoomDetail(room._id.toString(), userId);
                 }
@@ -177,4 +176,23 @@ export const getRoomDetail = async (roomId: string, userId: string) => {
         isFavorite: membership.is_favorite,
         createdAt: room.created_at,
     };
+};
+
+// 채팅방 나가기
+export const leaveRoom = async (roomId: string, userId: string) => {
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    await RoomMemberModel.deleteOne({ room_id: roomId, user_id: userId });
+
+    // 남은 멤버 확인
+    const remaining = await RoomMemberModel.countDocuments({ room_id: roomId });
+    if (remaining === 0) {
+        await RoomModel.findByIdAndDelete(roomId);
+        await MessageModel.deleteMany({ room_id: roomId });
+    }
 };

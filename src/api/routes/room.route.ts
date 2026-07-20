@@ -3,6 +3,7 @@ import {
     createRoomHandler,
     getMyRoomsHandler,
     getRoomDetailHandler,
+    leaveRoomHandler,
 } from "../controllers/room.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
@@ -82,3 +83,26 @@ router.get("/", authMiddleware, getMyRoomsHandler);
  *         description: 채팅방 없음
  */
 router.get("/:roomId", authMiddleware, getRoomDetailHandler);
+
+/**
+ * @swagger
+ * /api/rooms/{roomId}:
+ *   delete:
+ *     tags:
+ *       - Rooms
+ *     summary: 채팅방 나가기
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 성공
+ *       404:
+ *         description: 채팅방 없음
+ */
+router.delete("/:roomId", authMiddleware, leaveRoomHandler);
