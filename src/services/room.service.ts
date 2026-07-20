@@ -35,7 +35,7 @@ export const createRoom = async (userId: string, data: CreateRoomDto) => {
 
                 // TODO : 추후 getRoomDetail로 수정해야 함
                 if (otherMember) {
-                    return "이미 있음";
+                    return await getRoomDetail(room._id.toString(), userId);
                 }
             }
         }
@@ -58,14 +58,7 @@ export const createRoom = async (userId: string, data: CreateRoomDto) => {
     }));
     await RoomMemberModel.insertMany(memberDocs);
 
-    // TODO: getRoomDetail로 교체 예정
-    return {
-        roomId: room._id.toString(),
-        type: room.type,
-        name: room.name || null,
-        memberCount: allMemberIds.length,
-        lastMessage: null,
-    };
+    return await getRoomDetail(room._id.toString(), userId);
 };
 
 // 내 채팅방 목록 조회
