@@ -14,8 +14,16 @@ const options: swaggerJSDoc.Options = {
                 url: "/",
             },
         ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: "http",
+                    scheme: "bearer",
+                    bearerFormat: "JWT",
+                },
+            },
+        },
     },
-    // 나중에 라우터 생기면 여기서 JSDoc 주석 긁어옴
     apis: [
         env.NODE_ENV === "production"
             ? "./dist/api/**/*.js"
