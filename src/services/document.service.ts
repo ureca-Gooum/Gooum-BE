@@ -1,6 +1,8 @@
 import { DocumentModel } from "../models/document.model";
 import { MessageModel } from "../models/message.model";
 import { RoomMemberModel } from "../models/room-member.model";
+import { RoomModel } from "../models/room.model";
+import { UserModel } from "../models/user.model";
 import { CreateDocumentDto } from "../schemas/document.schema";
 
 // 문서 생성
@@ -48,4 +50,42 @@ export const createDocument = async (
         createdAt: document.created_at,
         updatedAt: document.updated_at,
     };
+};
+
+// 문서 목록 조회
+export const getDocuments = async (
+    userId: string,
+    roomId?: string,
+    type?: string,
+) => {
+    const filter: any = {
+        collaborators: userId,
+    };
+
+    if (roomId) filter.room_id = roomId;
+    if (type) filter.type = type;
+
+    const documents = await DocumentModel.find(filter).sort({ updated_at: -1 });
+
+    const result = [];
+    for (const doc of documents) {
+        const room = await RoomModel.findById(doc.room_id);
+        const createdByUser = await UserModel.findById(doc.created_by);
+
+        result.push({
+            documentId: doc._id.toString(),
+            title: doc.title,
+            type: doc.type,
+            roomId: doc.room_id.toString(),
+            roomName: room?.name || null,
+            createdBy: {
+                userId: createdByUser?._id.toString(),
+                name: createdByUser?.name,
+            },
+            createdAt: doc.created_at,
+            updatedAt: doc.updated_at,
+        });
+    }
+
+    return { documents: result, total: result.length };
 };

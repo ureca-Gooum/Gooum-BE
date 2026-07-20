@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
-import { createDocumentHandler } from "../controllers/document.controller";
+import {
+    createDocumentHandler,
+    getDocumentsHandler,
+} from "../controllers/document.controller";
 
 const router = Router();
 
@@ -31,5 +34,32 @@ const router = Router();
  *         description: 채팅방 멤버가 아님
  */
 router.post("/", authMiddleware, createDocumentHandler);
+
+/**
+ * @swagger
+ * /api/documents:
+ *   get:
+ *     tags:
+ *       - Documents
+ *     summary: 문서 목록 조회
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: roomId
+ *         schema:
+ *           type: string
+ *         description: 특정 채팅방 문서만 필터
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [document, ai_summary]
+ *         description: 문서 타입 필터
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
+router.get("/", authMiddleware, getDocumentsHandler);
 
 export default router;
