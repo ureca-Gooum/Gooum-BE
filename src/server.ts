@@ -13,6 +13,7 @@ import userRoutes from "./api/routes/user.route";
 import documentRoutes from "./api/routes/document.route";
 import { setupYWebSocket } from "./socket/yws.handler";
 import cors from "cors";
+import { setupSocket } from "./socket";
 
 const app = express();
 
@@ -43,7 +44,11 @@ const startServer = async () => {
 
     const httpServer = createServer(app);
 
+    // y-websocket (동시 편집)
     await setupYWebSocket(httpServer);
+
+    // Socket.io (채팅)
+    setupSocket(httpServer);
 
     const port = Number(process.env.PORT) || Number(env.PORT);
 
