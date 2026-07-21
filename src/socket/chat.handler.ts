@@ -256,4 +256,50 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
             }
         },
     );
+
+    // 연결 시 자동으로 온라인 상태 설정
+    if (userId) {
+        (async () => {
+            try {
+                await UserModel.findByIdAndUpdate(userId, {
+                    "presence.status": "online",
+                    "presence.last_seen_at": new Date(),
+                });
+
+                // 내가 속한 모든 채팅방 멤버들에게 "나 온라인 됐다"고 알림
+                const myRooms = await RoomMemberModel.find({ user_id: userId });
+                for (const room of myRooms) {
+                    socket.to(room.room_id.toString()).emit("presenceChanged", {
+                        userId: userId,
+                        status: "online",
+                        lastSeenAt: new Date(),
+                    });
+                }
+            } catch (err) {
+                console.error("[socket] connect 프레즌스 에러:", err);
+            }
+        })();
+    }
+
+    // 연결 해제 시 자동으로 오프라인 상태 설정
+    socket.on("disconnect", async () => {
+        if (!userId) return;
+        try {
+            await UserModel.findByIdAndUpdate(userId, {
+                "presence.status": "offline",
+                "presence.last_seen_at": new Date(),
+            });
+
+            const myRooms = await RoomMemberModel.find({ user_id: userId });
+            for (const room of myRooms) {
+                socket.to(room.room_id.toString()).emit("presenceChanged", {
+                    userId: userId,
+                    status: "offline",
+                    lastSeenAt: new Date(),
+                });
+            }
+        } catch (err) {
+            console.error("[socket] disconnect 프레즌스 에러:", err);
+        }
+    });
 };
