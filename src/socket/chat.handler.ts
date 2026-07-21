@@ -3,6 +3,7 @@ import { RoomMemberModel } from "../models/room-member.model";
 import { MessageModel } from "../models/message.model";
 import { UserModel } from "../models/user.model";
 import { RoomModel } from "../models/room.model";
+import { success } from "zod";
 
 // 에디터 JSON에서 텍스트만 추출 (last_message용)
 const extractText = (content: any): string => {
@@ -182,6 +183,40 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 callback?.({
                     success: false,
                     message: "타이핑 알림에 실패했어요.",
+                });
+            }
+        },
+    );
+
+    // 5. 프레즌스 상태 변경
+    socket.on(
+        "updatePresence",
+        async (
+            data: { status: "oline" | "away" | "offline" },
+            callback?: Function,
+        ) => {
+            try {
+                await UserModel.findByIdAndUpdate(userId, {
+                    "presence.status": data.status,
+                    "presence.last_seen_at": new Date(),
+                });
+
+                // 내가 속한 모든 채팅방 멤버들에게 알림
+                const myRooms = await RoomMemberModel.find({ user_id: userId });
+                for (const room of myRooms) {
+                    socket.to(room.room_id.toString()).emit("presenceChanged", {
+                        userId: userId,
+                        status: data.status,
+                        lastSeenAt: new Date(),
+                    });
+                }
+
+                callback?.({ success: true });
+            } catch (err) {
+                console.error("[socket] updatePresence 에러 : ", err);
+                callback?.({
+                    success: false,
+                    message: "상태 변경에 실패했어요",
                 });
             }
         },
