@@ -1,6 +1,10 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { RoomMemberModel } from "../models/room-member.model";
-
+import { MessageModel } from "../models/message.model";
+import { UserModel } from "../models/user.model";
+import { RoomModel } from "../models/room.model";
+import { isDeleted } from "yjs";
+import { success } from "zod";
 // 에디터 JSON에서 텍스트만 추출 (last_message용)
 const extractText = (content: any): string => {
     if (!content) return "";
@@ -74,6 +78,87 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 callback?.({
                     success: false,
                     message: "채팅방 퇴장에 실패했어요.",
+                });
+            }
+        },
+    );
+
+    // 3. 메세지 전송
+    socket.on(
+        "sendMessage",
+        async (
+            data: {
+                roomId: string;
+                content?: any;
+                type: "text" | "image" | "file" | "document";
+                fileUrl?: string;
+                fileName?: string;
+                documentId?: string;
+            },
+            callback?: Function,
+        ) => {
+            if (!userId) {
+                callback?.({ success: false, message: "인증이 필요합니다." });
+                return;
+            }
+
+            try {
+                const message = await MessageModel.create({
+                    room_id: data.roomId,
+                    sender_id: userId,
+                    content: data.content || undefined,
+                    type: data.type,
+                    file_url: data.fileUrl || undefined,
+                    file_name: data.fileName || undefined,
+                    document_id: data.documentId || undefined,
+                });
+
+                const sender = await UserModel.findById(userId);
+
+                const lastMessageContent =
+                    data.type === "text"
+                        ? extractText(data.content)
+                        : data.type === "image"
+                          ? "사진을 보냈습니다"
+                          : data.type === "file"
+                            ? "파일을 보냈습니다"
+                            : "문서를 공유했습니다";
+
+                await RoomModel.findByIdAndUpdate(data.roomId, {
+                    last_message: {
+                        content: lastMessageContent,
+                        sender_id: userId,
+                        sent_at: new Date(),
+                    },
+                });
+
+                const messageResponse = {
+                    messageId: message._id.toString(),
+                    roomId: data.roomId,
+                    sender: {
+                        userId: sender?._id.toString(),
+                        name: sender?.name,
+                        profileImageUrl: sender?.profile_image_url || null,
+                    },
+                    content: message.content || null,
+                    type: message.type,
+                    fileUrl: message.file_url || null,
+                    fileName: message.file_name || null,
+                    documentId: message.document_id?.toString() || null,
+                    isDeleted: false,
+                    createdAt: message.created_at,
+                };
+
+                io.to(data.roomId).emit("newMessage", messageResponse);
+                callback?.({
+                    success: true,
+                    messageId: message._id.toString(),
+                });
+            } catch (err) {
+                console.error("[socket] sendMessage 에러: ", err);
+                callback?.({
+                    success: false,
+                    message: "메세지 전송에 실패했어요.",
                 });
             }
         },
