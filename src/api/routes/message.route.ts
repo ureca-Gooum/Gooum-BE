@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { getMessagesHandler } from "../controllers/message.controller";
+import {
+    deleteMessageHandler,
+    getMessagesHandler,
+} from "../controllers/message.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
@@ -41,5 +44,30 @@ const router = Router();
  *         description: 멤버가 아님
  */
 router.get("/rooms/:roomId/messages", authMiddleware, getMessagesHandler);
+
+/**
+ * @swagger
+ * /api/messages/{messageId}:
+ *   delete:
+ *     tags:
+ *       - Messages
+ *     summary: 메시지 삭제
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 삭제 성공
+ *       403:
+ *         description: 본인 메시지만 삭제 가능
+ *       404:
+ *         description: 메시지 없음
+ */
+router.delete("/messages/:messageId", authMiddleware, deleteMessageHandler);
 
 export default router;

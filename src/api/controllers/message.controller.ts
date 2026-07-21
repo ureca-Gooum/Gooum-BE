@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getMessages } from "../../services/message.service";
+import { deleteMessage, getMessages } from "../../services/message.service";
 
 // GET /api/rooms/:roomId/messages
 export const getMessagesHandler = async (
@@ -19,6 +19,23 @@ export const getMessagesHandler = async (
             limit,
             cursor,
             search,
+        );
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+// DELETE /api/messages/:messageId
+export const deleteMessageHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result = await deleteMessage(
+            req.params.messageId,
+            req.user!.userId,
         );
         res.status(200).json(result);
     } catch (err) {

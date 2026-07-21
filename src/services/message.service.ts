@@ -84,3 +84,26 @@ export const getMessages = async (
         nextCursor: hasMore ? result[result.length - 1]._id.toString() : null,
     };
 };
+
+// 메시지 삭제 (소프트 삭제)
+export const deleteMessage = async (messageId: string, userId: string) => {
+    const message = await MessageModel.findById(messageId);
+    if (!message)
+        throw { statusCode: 404, message: "메시지를 찾을 수 없어요." };
+
+    if (message.sender_id.toString() !== userId) {
+        throw {
+            statusCode: 403,
+            message: "본인이 보낸 메시지만 삭제할 수 있어요.",
+        };
+    }
+
+    message.is_deleted = true;
+    message.content = undefined;
+    await message.save();
+
+    return {
+        messageId: message._id.toString(),
+        isDeleted: true,
+    };
+};
