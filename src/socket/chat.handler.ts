@@ -3,7 +3,7 @@ import { RoomMemberModel } from "../models/room-member.model";
 import { MessageModel } from "../models/message.model";
 import { UserModel } from "../models/user.model";
 import { RoomModel } from "../models/room.model";
-import { success } from "zod";
+import { NotificationModel } from "../models/notification.model";
 
 // 에디터 JSON에서 텍스트만 추출 (last_message용)
 const extractText = (content: any): string => {
@@ -54,7 +54,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
         },
     );
 
-    // 2. 채팅방 퇴장
+    // 2. 채팅방 화면 이탈 (단순 탭 이동/뒤로가기)
     socket.on(
         "leaveRoom",
         async (data: { roomId: string }, callback?: Function) => {
@@ -71,19 +71,24 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     );
                 }
 
-                console.log(`[socket] ${socket.id}가 ${data.roomId}에서 퇴장`);
+                console.log(
+                    `[socket] 유저(${userId}) / 소켓(${socket.id})이 ${data.roomId} 화면 이탈`,
+                );
                 callback?.({ success: true });
             } catch (err) {
-                console.error("[socket] leaveRoom에러 : ", err);
+                console.error(
+                    `[socket] leaveRoom 에러 (유저: ${userId}, 소켓: ${socket.id}): `,
+                    err,
+                );
                 callback?.({
                     success: false,
-                    message: "채팅방 퇴장에 실패했어요.",
+                    message: "채팅방 화면 이탈 처리에 실패했어요.",
                 });
             }
         },
     );
 
-    // 3. 메세지 전송
+    // 3. 메세지 전송 + 알림 생성
     socket.on(
         "sendMessage",
         async (
@@ -114,6 +119,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 });
 
                 const sender = await UserModel.findById(userId);
+                const room = await RoomModel.findById(data.roomId);
 
                 const lastMessageContent =
                     data.type === "text"
@@ -150,6 +156,35 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 };
 
                 io.to(data.roomId).emit("newMessage", messageResponse);
+
+                // 알림 생성 + 전달 (발신자 제외)
+                const members = await RoomMemberModel.find({
+                    room_id: data.roomId,
+                });
+
+                for (const member of members) {
+                    if (member.user_id.toString() === userId) continue;
+
+                    const notification = await NotificationModel.create({
+                        user_id: member.user_id,
+                        type: "message",
+                        title: room?.name || sender?.name || "새 메시지",
+                        body: `${sender?.name}: ${lastMessageContent}`,
+                        room_id: data.roomId,
+                    });
+
+                    // 해당 유저에게 실시간 알림 전달
+                    io.to(member.user_id.toString()).emit("newNotification", {
+                        notificationId: notification._id.toString(),
+                        type: notification.type,
+                        title: notification.title,
+                        body: notification.body,
+                        roomId: data.roomId,
+                        isRead: false,
+                        createdAt: notification.created_at,
+                    });
+                }
+
                 callback?.({
                     success: true,
                     messageId: message._id.toString(),
@@ -192,7 +227,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
     socket.on(
         "updatePresence",
         async (
-            data: { status: "oline" | "away" | "offline" },
+            data: { status: "online" | "away" | "offline" },
             callback?: Function,
         ) => {
             try {

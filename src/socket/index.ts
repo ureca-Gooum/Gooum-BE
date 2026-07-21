@@ -9,7 +9,7 @@ export const setupSocket = (httpServer: HttpServer) => {
             origin:
                 process.env.NODE_ENV === "production"
                     ? "https://gooum-green.vercel.app"
-                    : ["http://localhost:5173", "http://127.0.0.1:5500"],
+                    : ["http://localhost:5173", "http://127.0.0.1:5500"], // TODO 테스트 후 http://127.0.0.1:5500 삭제
             credentials: true,
         },
     });
@@ -35,7 +35,13 @@ export const setupSocket = (httpServer: HttpServer) => {
     });
 
     io.on("connection", (socket: Socket) => {
+        const userId = (socket as any).userId;
         console.log(`[socket] 유저 연결됨 : ${socket.id}`);
+
+        // 개인 알림용 room 자동 입장
+        if (userId) {
+            socket.join(userId);
+        }
 
         handleChat(io, socket);
 
