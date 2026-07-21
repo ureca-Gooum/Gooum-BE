@@ -1,5 +1,4 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
-import { date, success } from "zod";
 import { RoomMemberModel } from "../models/room-member.model";
 
 // 에디터 JSON에서 텍스트만 추출 (last_message용)
@@ -46,6 +45,35 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 callback?.({
                     success: false,
                     message: "채팅방 입장에 실패했어요.",
+                });
+            }
+        },
+    );
+
+    // 2. 채팅방 퇴장
+    socket.on(
+        "leaveRoom",
+        async (data: { roomId: string }, callback?: Function) => {
+            try {
+                socket.leave(data.roomId);
+
+                if (userId) {
+                    await RoomMemberModel.findOneAndUpdate(
+                        {
+                            room_id: data.roomId,
+                            user_id: userId,
+                        },
+                        { last_read_at: new Date() },
+                    );
+                }
+
+                console.log(`[socket] ${socket.id}가 ${data.roomId}에서 퇴장`);
+                callback?.({ success: true });
+            } catch (err) {
+                console.error("[socket] leaveRoom에러 : ", err);
+                callback?.({
+                    success: false,
+                    message: "채팅방 퇴장에 실패했어요.",
                 });
             }
         },
