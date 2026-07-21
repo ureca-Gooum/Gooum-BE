@@ -65,3 +65,16 @@ export const readNotification = async (
         isRead: true,
     };
 };
+
+// 전체 읽음 처리
+export const readAllNotifications = async (userId: string) => {
+    const result = await NotificationModel.updateMany(
+        { user_id: userId, is_read: false },
+        { is_read: true },
+    );
+
+    return {
+        message: "모든 알림을 읽음 처리했어요.",
+        updatedCount: result.modifiedCount,
+    };
+};

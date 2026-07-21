@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import {
     getNotifications,
+    readAllNotifications,
     readNotification,
 } from "../../services/notification.service";
 
@@ -31,6 +32,20 @@ export const readNotificationHandler = async (
             req.params.notificationId,
             req.user!.userId,
         );
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+// PATCH /api/notifications/read-all
+export const readAllNotificationsHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result = await readAllNotifications(req.user!.userId);
         res.status(200).json(result);
     } catch (err) {
         next(err);
