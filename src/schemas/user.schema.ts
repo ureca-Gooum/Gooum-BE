@@ -4,7 +4,7 @@ import { z } from "zod";
 export const updateUserSchema = z.object({
     name: z.string().min(1).optional(),
     statusMessage: z.string().optional(),
-    profileImageUrl: z.string().url().optional(),
+    profileImageUrl: z.string().optional(),
     theme: z
         .object({
             mode: z.enum(["light", "dark"]),
