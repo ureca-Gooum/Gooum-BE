@@ -79,3 +79,10 @@ export const getUsers = async (userId: string, search?: string) => {
         total: users.length,
     };
 };
+
+// 특정 유저 조회
+export const getUserById = async (userId: string) => {
+    const user = await UserModel.findById(userId);
+    if (!user) throw { statusCode: 404, message: "유저를 찾을 수 없어요." };
+    return toPublicProfileResponse(user);
+};

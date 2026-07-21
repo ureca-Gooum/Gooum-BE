@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
     getMeHandler,
+    getUserByIdHandler,
     getUsersHandler,
     updateMeHandler,
 } from "../controllers/user.controller";
@@ -83,5 +84,28 @@ router.get("/", authMiddleware, getUsersHandler);
  *         description: 수정 성공
  */
 router.patch("/me", authMiddleware, updateMeHandler);
+
+/**
+ * @swagger
+ * /api/users/{userId}:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: 특정 유저 조회
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 성공
+ *       404:
+ *         description: 유저 없음
+ */
+router.get("/:userId", authMiddleware, getUserByIdHandler);
 
 export default router;
