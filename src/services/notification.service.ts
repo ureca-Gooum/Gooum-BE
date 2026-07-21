@@ -43,3 +43,25 @@ export const getNotifications = async (
         nextCursor: hasMore ? result[result.length - 1]._id.toString() : null,
     };
 };
+
+// 알림 읽음 처리
+export const readNotification = async (
+    notificationId: string,
+    userId: string,
+) => {
+    const notification = await NotificationModel.findById(notificationId);
+    if (!notification)
+        throw { statusCode: 404, message: "알림을 찾을 수 없어요." };
+
+    if (notification.user_id.toString() !== userId) {
+        throw { statusCode: 404, message: "알림을 찾을 수 없어요." };
+    }
+
+    notification.is_read = true;
+    await notification.save();
+
+    return {
+        notificationId: notification._id.toString(),
+        isRead: true,
+    };
+};

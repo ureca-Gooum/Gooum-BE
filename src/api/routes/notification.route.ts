@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { getNotificationsHandler } from "../controllers/notification.controller";
+import {
+    getNotificationsHandler,
+    readNotificationHandler,
+} from "../controllers/notification.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
@@ -29,5 +32,28 @@ const router = Router();
  *         description: 성공
  */
 router.get("/", authMiddleware, getNotificationsHandler);
+
+/**
+ * @swagger
+ * /api/notifications/{notificationId}:
+ *   patch:
+ *     tags:
+ *       - Notifications
+ *     summary: 알림 읽음 처리
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: notificationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 성공
+ *       404:
+ *         description: 알림 없음
+ */
+router.patch("/:notificationId", authMiddleware, readNotificationHandler);
 
 export default router;
