@@ -9,9 +9,11 @@ import { connectDB } from "./core/db/mongoose";
 import { errorHandler } from "./core/middlewares/errorHandler";
 import authRoutes from "./api/routes/auth.route";
 import roomRoutes from "./api/routes/room.route";
+import userRoutes from "./api/routes/user.route";
 import documentRoutes from "./api/routes/document.route";
 import { setupYWebSocket } from "./socket/yws.handler";
 import cors from "cors";
+import { setupSocket } from "./socket";
 
 const app = express();
 
@@ -32,6 +34,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/users", userRoutes);
 
 app.use(errorHandler);
 
@@ -41,7 +44,11 @@ const startServer = async () => {
 
     const httpServer = createServer(app);
 
+    // y-websocket (동시 편집)
     await setupYWebSocket(httpServer);
+
+    // Socket.io (채팅)
+    setupSocket(httpServer);
 
     const port = Number(process.env.PORT) || Number(env.PORT);
 
