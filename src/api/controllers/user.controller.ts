@@ -1,5 +1,19 @@
 import { Request, Response, NextFunction } from "express";
-import { getUsers } from "../../services/user.service";
+import { getMe, getUsers } from "../../services/user.service";
+
+// GET /api/users/me
+export const getMeHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result = await getMe(req.user!.userId);
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
 
 // GET /api/users
 export const getUsersHandler = async (

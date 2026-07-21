@@ -1,8 +1,23 @@
 import { Router } from "express";
-import { getUsersHandler } from "../controllers/user.controller";
+import { getMeHandler, getUsersHandler } from "../controllers/user.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
+
+/**
+ * @swagger
+ * /api/users/me:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: 내 프로필 조회
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
+router.get("/me", authMiddleware, getMeHandler);
 
 /**
  * @swagger
