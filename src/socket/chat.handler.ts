@@ -3,8 +3,7 @@ import { RoomMemberModel } from "../models/room-member.model";
 import { MessageModel } from "../models/message.model";
 import { UserModel } from "../models/user.model";
 import { RoomModel } from "../models/room.model";
-import { isDeleted } from "yjs";
-import { success } from "zod";
+
 // 에디터 JSON에서 텍스트만 추출 (last_message용)
 const extractText = (content: any): string => {
     if (!content) return "";
@@ -159,6 +158,30 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 callback?.({
                     success: false,
                     message: "메세지 전송에 실패했어요.",
+                });
+            }
+        },
+    );
+
+    // 4. 타이핑 중
+    socket.on(
+        "typing",
+        async (data: { roomId: string }, callback?: Function) => {
+            try {
+                const user = await UserModel.findById(userId);
+
+                socket.to(data.roomId).emit("userTyping", {
+                    roomId: data.roomId,
+                    userId: userId,
+                    name: user?.name,
+                });
+
+                callback?.({ success: true });
+            } catch (err) {
+                console.error("[socket] typing 에러 : ", err);
+                callback?.({
+                    success: false,
+                    message: "타이핑 알림에 실패했어요.",
                 });
             }
         },
