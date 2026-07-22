@@ -36,4 +36,10 @@ const documentSchema = new Schema<IDocument>(
     },
 );
 
+// 1. 내 문서 목록 조회 최적화 (collaborators 검색 + updated_at 정렬)
+documentSchema.index({ collaborators: 1, updated_at: -1 });
+
+// 2. 특정 채팅방 내부의 문서 목록 조회 최적화 (room_id 검색)
+documentSchema.index({ room_id: 1 });
+
 export const DocumentModel = model<IDocument>("Document", documentSchema);
