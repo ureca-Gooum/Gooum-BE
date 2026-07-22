@@ -1,11 +1,18 @@
 import { Request, Response, NextFunction } from "express";
-import { createRoomSchema, favoriteSchema } from "../../schemas/room.schema";
 import {
+    addMembersSchema,
+    createRoomSchema,
+    favoriteSchema,
+    updateRoomSchema,
+} from "../../schemas/room.schema";
+import {
+    addMembers,
     createRoom,
     getMyRooms,
     getRoomDetail,
     leaveRoom,
     toggleFavorite,
+    updateRoom,
 } from "../../services/room.service";
 
 export const createRoomHandler = async (
@@ -72,6 +79,42 @@ export const toggleFavoriteHandler = async (
             req.params.roomId,
             req.user!.userId,
             isFavorite,
+        );
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const addMembersHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const { memberIds } = addMembersSchema.parse(req.body);
+        const result = await addMembers(
+            req.params.roomId,
+            req.user!.userId,
+            memberIds,
+        );
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const updateRoomHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const { name } = updateRoomSchema.parse(req.body);
+        const result = await updateRoom(
+            req.params.roomId,
+            req.user!.userId,
+            name,
         );
         res.status(200).json(result);
     } catch (err) {

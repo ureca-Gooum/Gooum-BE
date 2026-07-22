@@ -215,3 +215,78 @@ export const toggleFavorite = async (
 
     return await getRoomDetail(roomId, userId);
 };
+
+// 멤버 초대
+export const addMembers = async (
+    roomId: string,
+    userId: string,
+    memberIds: string[],
+) => {
+    const room = await RoomModel.findById(roomId);
+    if (!room) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    if (room.type === "direct") {
+        throw {
+            statusCode: 400,
+            message: "1:1 채팅방에는 멤버를 추가할 수 없어요.",
+        };
+    }
+
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    // 이미 멤버인 유저 필터링
+    const existingMembers = await RoomMemberModel.find({
+        room_id: roomId,
+        user_id: { $in: memberIds },
+    });
+    const existingIds = existingMembers.map((m) => m.user_id.toString());
+    const newMemberIds = memberIds.filter((id) => !existingIds.includes(id));
+
+    if (newMemberIds.length === 0) {
+        return { message: "이미 모든 멤버가 참여 중이에요.", addedCount: 0 };
+    }
+
+    const memberDocs = newMemberIds.map((memberId) => ({
+        room_id: roomId,
+        user_id: memberId,
+        last_read_at: new Date(),
+        is_favorite: false,
+    }));
+    await RoomMemberModel.insertMany(memberDocs);
+
+    return { message: "멤버를 초대했어요.", addedCount: newMemberIds.length };
+};
+
+// 채팅방 이름 수정
+export const updateRoom = async (
+    roomId: string,
+    userId: string,
+    name: string,
+) => {
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    const room = await RoomModel.findById(roomId);
+    if (!room) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    if (room.type === "direct") {
+        throw {
+            statusCode: 400,
+            message: "1:1 채팅방은 이름을 변경할 수 없어요.",
+        };
+    }
+
+    room.name = name;
+    await room.save();
+
+    return await getRoomDetail(roomId, userId);
+};
