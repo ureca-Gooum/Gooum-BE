@@ -15,3 +15,12 @@ export const favoriteSchema = z.object({
 });
 
 export type FavoriteDto = z.infer<typeof favoriteSchema>;
+
+// POST /api/rooms/:roomId/members 요청 검증
+export const addMembersSchema = z.object({
+    memberIds: z
+        .array(z.string())
+        .min(1, "초대할 멤버를 1명 이상 지정해주세요."),
+});
+
+export type AddMembersDto = z.infer<typeof addMembersSchema>;

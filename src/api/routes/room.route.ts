@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+    addMembersHandler,
     createRoomHandler,
     getMyRoomsHandler,
     getRoomDetailHandler,
@@ -42,8 +43,6 @@ const router = Router();
  *         description: 잘못된 요청
  */
 router.post("/", authMiddleware, createRoomHandler);
-
-export default router;
 
 /**
  * @swagger
@@ -137,3 +136,41 @@ router.delete("/:roomId", authMiddleware, leaveRoomHandler);
  *         description: 성공
  */
 router.patch("/:roomId/favorite", authMiddleware, toggleFavoriteHandler);
+
+/**
+ * @swagger
+ * /api/rooms/{roomId}/members:
+ *   post:
+ *     tags:
+ *       - Rooms
+ *     summary: 채팅방 멤버 초대
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               memberIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: 초대 성공
+ *       400:
+ *         description: 1:1 채팅방
+ *       403:
+ *         description: 멤버가 아님
+ */
+router.post("/:roomId/members", authMiddleware, addMembersHandler);
+
+export default router;
