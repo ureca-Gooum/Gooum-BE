@@ -11,6 +11,9 @@ import authRoutes from "./api/routes/auth.route";
 import roomRoutes from "./api/routes/room.route";
 import userRoutes from "./api/routes/user.route";
 import documentRoutes from "./api/routes/document.route";
+import messageRoutes from "./api/routes/message.route";
+import notificationRoutes from "./api/routes/notification.route";
+import uploadRoutes from "./api/routes/upload.route";
 import { setupYWebSocket } from "./socket/yws.handler";
 import cors from "cors";
 import { setupSocket } from "./socket";
@@ -35,6 +38,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.use(errorHandler);
 
