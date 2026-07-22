@@ -24,3 +24,10 @@ export const addMembersSchema = z.object({
 });
 
 export type AddMembersDto = z.infer<typeof addMembersSchema>;
+
+// PATCH /api/rooms/:roomId 요청 검증
+export const updateRoomSchema = z.object({
+    name: z.string().min(1, "채팅방 이름이 필요합니다."),
+});
+
+export type UpdateRoomDto = z.infer<typeof updateRoomSchema>;

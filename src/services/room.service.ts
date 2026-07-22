@@ -261,3 +261,32 @@ export const addMembers = async (
 
     return { message: "멤버를 초대했어요.", addedCount: newMemberIds.length };
 };
+
+// 채팅방 이름 수정
+export const updateRoom = async (
+    roomId: string,
+    userId: string,
+    name: string,
+) => {
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    const room = await RoomModel.findById(roomId);
+    if (!room) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    if (room.type === "direct") {
+        throw {
+            statusCode: 400,
+            message: "1:1 채팅방은 이름을 변경할 수 없어요.",
+        };
+    }
+
+    room.name = name;
+    await room.save();
+
+    return await getRoomDetail(roomId, userId);
+};
