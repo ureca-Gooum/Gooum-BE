@@ -19,6 +19,10 @@ const settings: Record<string, string> = {
     KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || "",
     KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || "",
     KAKAO_REDIRECT_URI: process.env.KAKAO_REDIRECT_URI || "",
+    AZURE_STORAGE_CONNECTION_STRING:
+        process.env.AZURE_STORAGE_CONNECTION_STRING || "",
+    AZURE_STORAGE_CONTAINER_NAME:
+        process.env.AZURE_STORAGE_CONTAINER_NAME || "uploads",
 };
 
 // 배포 환경이면 Key Vault에서 시크릿 가져와서 덮어쓰기
