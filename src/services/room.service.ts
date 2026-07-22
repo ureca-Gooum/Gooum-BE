@@ -62,30 +62,57 @@ export const createRoom = async (userId: string, data: CreateRoomDto) => {
 
 // 내 채팅방 목록 조회
 export const getMyRooms = async (userId: string) => {
-    const myMemberships = await RoomMemberModel.find({ user_id: userId });
+    // 1. 내 멤버십 목록 조회 (.lean() 사용)
+    const myMemberships = await RoomMemberModel.find({
+        user_id: userId,
+    }).lean();
+    if (myMemberships.length === 0) return { rooms: [], total: 0 };
 
-    const rooms = [];
-    for (const membership of myMemberships) {
-        const room = await RoomModel.findById(membership.room_id);
-        if (!room) continue;
+    const roomIds = myMemberships.map((m) => m.room_id);
+    const membershipMap = new Map(
+        myMemberships.map((m) => [m.room_id.toString(), m]),
+    );
 
-        // 멤버 정보 조회
-        const members = await RoomMemberModel.find({ room_id: room._id });
-        const memberUsers = await UserModel.find({
-            _id: { $in: members.map((m) => m.user_id) },
-        });
+    // 2. 관련 데이터 병렬 일괄 조회 (In-Memory 병합)
+    const [rooms, allMembers] = await Promise.all([
+        RoomModel.find({ _id: { $in: roomIds } }).lean(),
+        RoomMemberModel.find({ room_id: { $in: roomIds } }).lean(),
+    ]);
 
-        // 본인 제회 멤버 목록
-        const otherMembers = memberUsers
-            .filter((u) => u._id.toString() !== userId)
+    // 3. 전체 관련 유저 ID 수집 및 일괄 조회
+    const allUserIds = Array.from(
+        new Set(allMembers.map((m) => m.user_id.toString())),
+    );
+    const users = await UserModel.find({ _id: { $in: allUserIds } }).lean();
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+    // 4. 채팅방별 멤버 매핑
+    const roomMembersMap = new Map<string, typeof allMembers>();
+    for (const member of allMembers) {
+        const rId = member.room_id.toString();
+        if (!roomMembersMap.has(rId)) roomMembersMap.set(rId, []);
+        roomMembersMap.get(rId)!.push(member);
+    }
+
+    // 5. 각 방별 데이터 조립 및 안 읽은 메시지 수 병렬 처리
+    const roomPromises = rooms.map(async (room) => {
+        const roomIdStr = room._id.toString();
+        const membership = membershipMap.get(roomIdStr)!;
+        const roomMembers = roomMembersMap.get(roomIdStr) || [];
+
+        // 멤버 유저 정보 구성
+        const otherMembers = roomMembers
+            .map((m) => userMap.get(m.user_id.toString()))
+            .filter(
+                (u): u is NonNullable<typeof u> =>
+                    Boolean(u) && u!._id.toString() !== userId,
+            )
             .map((u) => {
                 const memberInfo: any = {
                     userId: u._id.toString(),
                     name: u.name,
                     profileImageUrl: u.profile_image_url || null,
                 };
-
-                // 1:1이면 상대방 프레즌스 포함
                 if (room.type === "direct") {
                     memberInfo.presence = {
                         status: u.presence?.status || "offline",
@@ -94,18 +121,18 @@ export const getMyRooms = async (userId: string) => {
                 return memberInfo;
             });
 
-        // 안 읽은 메세지 수
+        // 안 읽은 메시지 수
         const unreadCount = await MessageModel.countDocuments({
             room_id: room._id,
             created_at: { $gt: membership.last_read_at },
         });
 
-        rooms.push({
-            roomId: room._id.toString(),
+        return {
+            roomId: roomIdStr,
             type: room.type,
             name: room.name || null,
             members: otherMembers,
-            memberCount: memberUsers.length,
+            memberCount: roomMembers.length,
             lastMessage: room.last_message
                 ? {
                       content: room.last_message.content,
@@ -114,17 +141,22 @@ export const getMyRooms = async (userId: string) => {
                 : null,
             unreadCount,
             isFavorite: membership.is_favorite,
-        });
-    }
+        };
+    });
 
-    // 마지막 메세지 시각 기준 정렬
-    rooms.sort((a, b) => {
-        const aTime = a.lastMessage?.sentAt?.getTime() || 0;
-        const bTime = a.lastMessage?.sentAt?.getTime() || 0;
+    const resultRooms = await Promise.all(roomPromises);
+
+    resultRooms.sort((a, b) => {
+        const aTime = a.lastMessage?.sentAt
+            ? new Date(a.lastMessage.sentAt).getTime()
+            : 0;
+        const bTime = b.lastMessage?.sentAt
+            ? new Date(b.lastMessage.sentAt).getTime()
+            : 0;
         return bTime - aTime;
     });
 
-    return { rooms, total: rooms.length };
+    return { rooms: resultRooms, total: resultRooms.length };
 };
 
 // 채팅방 상세 조회
@@ -212,6 +244,81 @@ export const toggleFavorite = async (
 
     membership.is_favorite = isFavorite;
     await membership.save();
+
+    return await getRoomDetail(roomId, userId);
+};
+
+// 멤버 초대
+export const addMembers = async (
+    roomId: string,
+    userId: string,
+    memberIds: string[],
+) => {
+    const room = await RoomModel.findById(roomId);
+    if (!room) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    if (room.type === "direct") {
+        throw {
+            statusCode: 400,
+            message: "1:1 채팅방에는 멤버를 추가할 수 없어요.",
+        };
+    }
+
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    // 이미 멤버인 유저 필터링
+    const existingMembers = await RoomMemberModel.find({
+        room_id: roomId,
+        user_id: { $in: memberIds },
+    });
+    const existingIds = existingMembers.map((m) => m.user_id.toString());
+    const newMemberIds = memberIds.filter((id) => !existingIds.includes(id));
+
+    if (newMemberIds.length === 0) {
+        return { message: "이미 모든 멤버가 참여 중이에요.", addedCount: 0 };
+    }
+
+    const memberDocs = newMemberIds.map((memberId) => ({
+        room_id: roomId,
+        user_id: memberId,
+        last_read_at: new Date(),
+        is_favorite: false,
+    }));
+    await RoomMemberModel.insertMany(memberDocs);
+
+    return { message: "멤버를 초대했어요.", addedCount: newMemberIds.length };
+};
+
+// 채팅방 이름 수정
+export const updateRoom = async (
+    roomId: string,
+    userId: string,
+    name: string,
+) => {
+    const membership = await RoomMemberModel.findOne({
+        room_id: roomId,
+        user_id: userId,
+    });
+    if (!membership)
+        throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    const room = await RoomModel.findById(roomId);
+    if (!room) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    if (room.type === "direct") {
+        throw {
+            statusCode: 400,
+            message: "1:1 채팅방은 이름을 변경할 수 없어요.",
+        };
+    }
+
+    room.name = name;
+    await room.save();
 
     return await getRoomDetail(roomId, userId);
 };

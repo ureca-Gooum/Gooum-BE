@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { loginHandler, logoutHandler } from "../controllers/auth.controller";
+import {
+    loginHandler,
+    logoutHandler,
+    refreshHandler,
+} from "../controllers/auth.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
 const router = Router();
@@ -43,5 +47,21 @@ router.post("/login", loginHandler);
  *         description: 로그아웃 성공
  */
 router.post("/logout", authMiddleware, logoutHandler);
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Access Token 재발급
+ *     description: 쿠키의 refreshToken으로 새 accessToken + refreshToken 발급
+ *     responses:
+ *       200:
+ *         description: 재발급 성공
+ *       401:
+ *         description: 유효하지 않은 토큰
+ */
+router.post("/refresh", refreshHandler);
 
 export default router;

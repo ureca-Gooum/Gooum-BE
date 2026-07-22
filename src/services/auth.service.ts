@@ -1,5 +1,9 @@
 import { UserModel, IUser } from "../models/user.model";
-import { createAccessToken, createRefreshToken } from "../core/security/jwt";
+import {
+    createAccessToken,
+    createRefreshToken,
+    verifyToken,
+} from "../core/security/jwt";
 import { getKakaoToken, getKakaoUserInfo } from "./kakao.service";
 
 interface LoginResult {
@@ -59,4 +63,31 @@ const findOrCreateUser = async (
 
 export const removeRefreshToken = async (userId: string) => {
     await UserModel.findByIdAndUpdate(userId, { refresh_token: null });
+};
+
+// 토큰 재발급
+export const refresh = async (oldRefreshToken: string) => {
+    // 1. refreshToken 검증
+    const payload = verifyToken(oldRefreshToken);
+
+    if (payload.type !== "refresh") {
+        throw { statusCode: 401, message: "유효하지 않은 토큰이에요." };
+    }
+
+    // 2. 유저 조회 + DB의 refreshToken과 일치하는지 확인
+    const user = await UserModel.findById(payload.userId);
+
+    if (!user || user.refresh_token !== oldRefreshToken) {
+        throw { statusCode: 401, message: "유효하지 않은 토큰이에요." };
+    }
+
+    // 3. 새 토큰 발급
+    const accessToken = createAccessToken({ userId: user._id });
+    const refreshToken = createRefreshToken({ userId: user._id });
+
+    // 4. DB에 새 refreshToken 저장
+    user.refresh_token = refreshToken;
+    await user.save();
+
+    return { accessToken, refreshToken };
 };
