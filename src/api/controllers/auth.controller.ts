@@ -1,7 +1,18 @@
 import { Request, Response, NextFunction } from "express";
-import { loginSchema } from "../../schemas/auth.schema";
-import { login, removeRefreshToken } from "../../services/auth.service";
+import { loginSchema, RefreshResponse } from "../../schemas/auth.schema";
+import {
+    login,
+    refresh,
+    removeRefreshToken,
+} from "../../services/auth.service";
 import { env } from "../../core/config/env";
+
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "strict" as const,
+    maxAge: Number(env.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60 * 1000,
+};
 
 export const loginHandler = async (
     req: Request,
@@ -12,12 +23,7 @@ export const loginHandler = async (
         const { code } = loginSchema.parse(req.body);
         const result = await login(code);
 
-        res.cookie("refreshToken", result.refreshToken, {
-            httpOnly: true,
-            secure: env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: Number(env.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60 * 1000,
-        });
+        res.cookie("refreshToken", result.refreshToken, COOKIE_OPTIONS);
 
         res.status(200).json({
             accessToken: result.accessToken,
@@ -52,5 +58,32 @@ export const logoutHandler = async (
         res.status(200).json({ message: "로그아웃 되었어요." });
     } catch (err) {
         next(err);
+    }
+};
+
+export const refreshHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const oldRefreshToken = req.cookies.refreshToken;
+
+        if (!oldRefreshToken) {
+            res.status(401).json({ message: "유효하지 않은 토큰이에요." });
+            return;
+        }
+
+        const result = await refresh(oldRefreshToken);
+
+        res.cookie("refreshToken", result.refreshToken, COOKIE_OPTIONS);
+
+        const response: RefreshResponse = {
+            accessToken: result.accessToken,
+        };
+
+        res.status(200).json(response);
+    } catch (err) {
+        res.status(401).json({ message: "유효하지 않은 토큰이에요." });
     }
 };
