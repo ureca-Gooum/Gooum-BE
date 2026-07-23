@@ -13,6 +13,7 @@ export const getMessagesHandler = async (
         const limit = Number(req.query.limit) || 50;
         const cursor = req.query.cursor as string | undefined;
         const search = req.query.search as string | undefined;
+        const type = req.query.type as string | undefined;
 
         const result = await getMessages(
             roomId,
@@ -20,6 +21,7 @@ export const getMessagesHandler = async (
             limit,
             cursor,
             search,
+            type,
         );
         res.status(200).json(result);
     } catch (err) {

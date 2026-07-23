@@ -9,6 +9,7 @@ export const getMessages = async (
     limit: number = 50,
     cursor?: string,
     search?: string,
+    type?: string,
 ) => {
     // 멤버인지 확인
     const membership = await RoomMemberModel.findOne({
@@ -38,6 +39,12 @@ export const getMessages = async (
                 },
             },
         ];
+    }
+
+    // type
+    if (type) {
+        const types = type.split(",");
+        filter.type = { $in: types };
     }
 
     const messages = await MessageModel.find(filter)
