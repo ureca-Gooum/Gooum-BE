@@ -11,7 +11,16 @@ const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
     sameSite: "strict" as const,
+    path: "/",
     maxAge: Number(env.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60 * 1000,
+};
+
+// 2) 로그아웃(삭제) 전용 옵션
+const CLEAR_COOKIE_OPTIONS = {
+    httpOnly: COOKIE_OPTIONS.httpOnly,
+    secure: COOKIE_OPTIONS.secure,
+    sameSite: COOKIE_OPTIONS.sameSite,
+    path: COOKIE_OPTIONS.path,
 };
 
 export const loginHandler = async (
@@ -54,7 +63,8 @@ export const logoutHandler = async (
             await removeRefreshToken(userId);
         }
 
-        res.clearCookie("refreshToken");
+        res.clearCookie("refreshToken", CLEAR_COOKIE_OPTIONS);
+
         res.status(200).json({ message: "로그아웃 되었어요." });
     } catch (err) {
         next(err);

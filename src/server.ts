@@ -14,6 +14,7 @@ import documentRoutes from "./api/routes/document.route";
 import messageRoutes from "./api/routes/message.route";
 import notificationRoutes from "./api/routes/notification.route";
 import uploadRoutes from "./api/routes/upload.route";
+import searchRoutes from "./api/routes/search.route";
 import { setupYWebSocket } from "./socket/yws.handler";
 import cors from "cors";
 import { setupSocket } from "./socket";
@@ -41,20 +42,19 @@ app.use("/api/users", userRoutes);
 app.use("/api", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/search", searchRoutes);
 
 app.use(errorHandler);
+
+const httpServer = createServer(app);
+export const io = setupSocket(httpServer);
 
 const startServer = async () => {
     await loadSecrets();
     await connectDB();
 
-    const httpServer = createServer(app);
-
     // y-websocket (동시 편집)
     await setupYWebSocket(httpServer);
-
-    // Socket.io (채팅)
-    setupSocket(httpServer);
 
     const port = Number(process.env.PORT) || Number(env.PORT);
 

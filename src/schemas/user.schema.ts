@@ -16,6 +16,11 @@ export const updateUserSchema = z.object({
             mention: z.boolean(),
         })
         .optional(),
+    presence: z
+        .object({
+            status: z.enum(["online", "away", "busy", "offline"]),
+        })
+        .optional(),
 });
 
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;

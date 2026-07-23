@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { deleteMessage, getMessages } from "../../services/message.service";
+import { io } from "../../server";
 
 // GET /api/rooms/:roomId/messages
 export const getMessagesHandler = async (
@@ -12,6 +13,7 @@ export const getMessagesHandler = async (
         const limit = Number(req.query.limit) || 50;
         const cursor = req.query.cursor as string | undefined;
         const search = req.query.search as string | undefined;
+        const type = req.query.type as string | undefined;
 
         const result = await getMessages(
             roomId,
@@ -19,6 +21,7 @@ export const getMessagesHandler = async (
             limit,
             cursor,
             search,
+            type,
         );
         res.status(200).json(result);
     } catch (err) {
@@ -37,6 +40,14 @@ export const deleteMessageHandler = async (
             req.params.messageId,
             req.user!.userId,
         );
+
+        // 같은 방 멤버들에게 실시간 전달
+        if (io) {
+            io.to(result.roomId).emit("messageDeleted", {
+                messageId: result.messageId,
+                roomId: result.roomId,
+            });
+        }
         res.status(200).json(result);
     } catch (err) {
         next(err);

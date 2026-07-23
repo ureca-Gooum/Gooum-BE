@@ -53,6 +53,10 @@ export const updateMe = async (userId: string, data: UpdateUserDto) => {
     if (data.theme) updateData.theme = data.theme;
     if (data.notificationSettings)
         updateData.notification_settings = data.notificationSettings;
+    if (data.presence) {
+        updateData["presence.status"] = data.presence.status;
+        updateData["presence.last_seen_at"] = new Date();
+    }
 
     const user = await UserModel.findByIdAndUpdate(
         userId,
