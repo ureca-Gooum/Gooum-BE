@@ -44,16 +44,12 @@ app.use("/api/upload", uploadRoutes);
 
 app.use(errorHandler);
 
-let io: any;
+const httpServer = createServer(app);
+export const io = setupSocket(httpServer);
 
 const startServer = async () => {
     await loadSecrets();
     await connectDB();
-
-    const httpServer = createServer(app);
-
-    // Socket.io (채팅)
-    io = setupSocket(httpServer);
 
     // y-websocket (동시 편집)
     await setupYWebSocket(httpServer);
@@ -66,4 +62,3 @@ const startServer = async () => {
 };
 
 startServer();
-export { io };
