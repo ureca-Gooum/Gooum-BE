@@ -1,5 +1,6 @@
 import { MessageModel } from "../models/message.model";
 import { RoomMemberModel } from "../models/room-member.model";
+import { RoomModel } from "../models/room.model";
 import { UserModel } from "../models/user.model";
 
 // 메시지 기록 조회
@@ -95,19 +96,28 @@ export const getMessages = async (
 // 메시지 삭제 (소프트 삭제)
 export const deleteMessage = async (messageId: string, userId: string) => {
     const message = await MessageModel.findById(messageId);
-    if (!message)
-        throw { statusCode: 404, message: "메시지를 찾을 수 없어요." };
+    if (!message) throw { statusCode: 404, message: "메시지를 찾을 수 없어요." };
 
     if (message.sender_id.toString() !== userId) {
-        throw {
-            statusCode: 403,
-            message: "본인이 보낸 메시지만 삭제할 수 있어요.",
-        };
+        throw { statusCode: 403, message: "본인이 보낸 메시지만 삭제할 수 있어요." };
     }
 
     message.is_deleted = true;
     message.content = undefined;
     await message.save();
+
+    // lastMessage가 이 메시지였으면 업데이트
+    const room = await RoomModel.findById(message.room_id);
+    if (room?.last_message?.sender_id?.toString() === userId) {
+        const lastMessageTime = room.last_message.sent_at?.getTime();
+        const deletedMessageTime = message.created_at.getTime();
+
+        // 시간이 같으면 이 메시지가 lastMessage였던 것
+        if (lastMessageTime && Math.abs(lastMessageTime - deletedMessageTime) < 1000) {
+            room.last_message.content = "이 메시지가 삭제되었습니다.";
+            await room.save();
+        }
+    }
 
     return {
         messageId: message._id.toString(),
