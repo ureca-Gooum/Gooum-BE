@@ -56,7 +56,6 @@ const startServer = async () => {
     await setupYWebSocket(httpServer);
 
     // Socket.io (채팅)
-    setupSocket(httpServer);
     io = setupSocket(httpServer);
 
     const port = Number(process.env.PORT) || Number(env.PORT);
