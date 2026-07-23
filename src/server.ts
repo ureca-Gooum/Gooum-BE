@@ -44,6 +44,8 @@ app.use("/api/upload", uploadRoutes);
 
 app.use(errorHandler);
 
+let io: any;
+
 const startServer = async () => {
     await loadSecrets();
     await connectDB();
@@ -55,6 +57,7 @@ const startServer = async () => {
 
     // Socket.io (채팅)
     setupSocket(httpServer);
+    io = setupSocket(httpServer);
 
     const port = Number(process.env.PORT) || Number(env.PORT);
 
@@ -64,3 +67,4 @@ const startServer = async () => {
 };
 
 startServer();
+export { io };
