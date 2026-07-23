@@ -52,11 +52,11 @@ const startServer = async () => {
 
     const httpServer = createServer(app);
 
-    // y-websocket (동시 편집)
-    await setupYWebSocket(httpServer);
-
     // Socket.io (채팅)
     io = setupSocket(httpServer);
+
+    // y-websocket (동시 편집)
+    await setupYWebSocket(httpServer);
 
     const port = Number(process.env.PORT) || Number(env.PORT);
 
