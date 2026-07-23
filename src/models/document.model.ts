@@ -3,7 +3,7 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IDocument extends Document {
     title: string;
     type: "document" | "ai_summary";
-    room_id: Types.ObjectId;
+    room_id?: Types.ObjectId;
     created_by: Types.ObjectId;
     content?: any;
     original_messages?: Types.ObjectId[];
@@ -20,7 +20,11 @@ const documentSchema = new Schema<IDocument>(
             enum: ["document", "ai_summary"],
             required: true,
         },
-        room_id: { type: Schema.Types.ObjectId, ref: "Room", required: true },
+        room_id: {
+            type: Schema.Types.ObjectId,
+            ref: "Room",
+            default: undefined,
+        },
         created_by: {
             type: Schema.Types.ObjectId,
             ref: "User",
