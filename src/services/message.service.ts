@@ -104,6 +104,7 @@ export const deleteMessage = async (messageId: string, userId: string) => {
 
     return {
         messageId: message._id.toString(),
+        roomId: message.room_id.toString(),
         isDeleted: true,
     };
 };
