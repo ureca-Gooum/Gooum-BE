@@ -2,10 +2,10 @@ import { Schema, model, Document, Types } from "mongoose";
 
 export interface INotification extends Document {
     user_id: Types.ObjectId;
-    type: "message" | "mention" | "summary";
+    type: "message" | "mention" | "document";
     title: string;
     body?: string;
-    room_id?: Types.ObjectId;
+    room_id: Types.ObjectId;
     message_id?: Types.ObjectId; 
     is_read: boolean;
     created_at: Date;
@@ -16,7 +16,7 @@ const notificationSchema = new Schema<INotification>(
         user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
         type: {
             type: String,
-            enum: ["message", "mention", "summary"],
+            enum: ["message", "mention", "document"],
             required: true,
         },
         title: { type: String, required: true },

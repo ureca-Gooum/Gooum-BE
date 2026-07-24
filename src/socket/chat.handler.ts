@@ -181,12 +181,23 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     // 접속 중이면 알림 안 보냄
                     if (isInRoom && !isMentioned) continue; 
 
+                    // 메시지 타입에 따라 알림 타입 결정
+                    let notificationType: "message" | "mention" | "document" = "message";
+                    let notificationTitle = room?.name || sender?.name || "새 메시지";
+
+
+                    if (isMentioned) {
+                        notificationType = "mention";
+                        notificationTitle = `${sender?.name}님이 회원님을 멘션했어요`;
+                    } else if (data.type === "document") {
+                        notificationType = "document";
+                        notificationTitle = "새 문서가 공유됐어요";
+                    }
+
                     const notification = await NotificationModel.create({
                         user_id: member.user_id,
-                        type: isMentioned ? "mention" : "message",
-                        title: isMentioned
-                            ? `${sender?.name}님이 회원님을 멘션했어요`
-                            : room?.name || sender?.name || "새 메시지",
+                        type: notificationType,
+                        title: notificationTitle,
                         body: `${sender?.name}: ${lastMessageContent}`,
                         room_id: data.roomId,
                         message_id: message._id,
@@ -199,7 +210,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         title: notification.title,
                         body: notification.body,
                         roomId: data.roomId,
-                        messageId: message._id,
+                        messageId: message._id.toString(),
                         isRead: false,
                         createdAt: notification.created_at,
                     });
