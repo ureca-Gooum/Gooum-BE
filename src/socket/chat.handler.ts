@@ -266,6 +266,14 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     "presence.last_seen_at": new Date(),
                 });
 
+                // 안 읽은 알림 수 전달
+                NotificationModel.countDocuments({
+                    user_id: userId,
+                    is_read: false,
+                }).then((unreadCount) => {
+                    socket.emit("unreadCount", { unreadCount });
+                }).catch(() => {});
+
                 // 내가 속한 모든 채팅방 멤버들에게 "나 온라인 됐다"고 알림
                 const myRooms = await RoomMemberModel.find({ user_id: userId });
                 for (const room of myRooms) {
