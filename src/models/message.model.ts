@@ -4,7 +4,7 @@ export interface IMessage extends Document {
     room_id: Types.ObjectId;
     sender_id: Types.ObjectId;
     content?: any;
-    type: "text" | "image" | "file" | "document";
+    type: "text" | "image" | "file" | "document" | "ai_summary";
     file_url?: string;
     file_name?: string;
     document_id?: Types.ObjectId;
@@ -19,7 +19,7 @@ const messageSchema = new Schema<IMessage>(
         content: { type: Schema.Types.Mixed, default: undefined },
         type: {
             type: String,
-            enum: ["text", "image", "file", "document"],
+            enum: ["text", "image", "file", "document", "ai_summary"],
             required: true,
         },
         file_url: { type: String, default: undefined },
