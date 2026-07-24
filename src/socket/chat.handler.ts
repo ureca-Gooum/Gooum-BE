@@ -163,25 +163,34 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 // 알림 생성
                 const members = await RoomMemberModel.find({ room_id: data.roomId });
                 const mentionSet = new Set(data.mentions || []);
+                const hasMentions = mentionSet.size > 0;
 
                 for (const member of members) {
-                    if (member.user_id.toString() === userId) continue;
+                    const memberIdStr = member.user_id.toString();
+                    
+                    // 1. 본인이 보낸 메시지면 스킵
+                    if (memberIdStr === userId) continue;
 
-                    // 멘션된 유저는 방에 접속 중이어도 알림 보냄
-                    const isMentioned = mentionSet.has(member.user_id.toString());
+                    const isMentioned = mentionSet.has(memberIdStr);
 
-                    // 채팅방별 알림 설정 체크
-                    if (isMentioned && !member.notification_settings.mention) continue;
-                    if (!isMentioned && !member.notification_settings.message) continue;
+                    // 멘션 메시지인 경우, 멘션되지 않은 일반 멤버는 알림 제외
+                    if (hasMentions && !isMentioned) continue;
+                    
+                    //알림 설정 체크 (멘션 수신 vs 일반 메시지 수신)
+                    if (isMentioned) {
+                        if (!member.notification_settings?.mention) continue;
+                    } else {
+                        if (!member.notification_settings?.message) continue;
+                    }
 
-                    // 현재 방에 접속 중이면 알림 안 보냄 (멘션 제외)
-                    const memberSockets = await io.in(member.user_id.toString()).fetchSockets();
-                    const isInRoom = memberSockets.some((s: any) =>
-                        s.rooms.has(data.roomId),
-                    );
+                    // 현재 해당 방을 열어두고 접속 중인지 확인
+                    const memberSockets = await io.in(memberIdStr).fetchSockets();
+                    const isInRoom = memberSockets.some((s: any) => s.rooms.has(data.roomId));
 
-                    // 접속 중이면 알림 안 보냄
                     if (isInRoom && !isMentioned) continue;
+
+                    const member_info = await UserModel.findById(member.user_id).select("name").lean();
+                    const member_name = member_info?.name || "알 수 없음";
 
                     // 메시지 타입에 따라 알림 타입 결정
                     let notificationType: "message" | "document" | "mention" = "message";
@@ -204,11 +213,16 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         notificationTitle = `${sender?.name}님이 AI 요약을 보냈어요`;
                     }
 
+                    const notificationBody = isMentioned 
+                        ? `${sender?.name || '알 수 없음'}: @${member_name} ${lastMessageContent}`
+                        : `${sender?.name || '알 수 없음'}: ${lastMessageContent}`;
+                    
+                    // DB 저장 및 실시간 알림 전송
                     const notification = await NotificationModel.create({
                         user_id: member.user_id,
                         type: notificationType,
                         title: notificationTitle,
-                        body: `${sender?.name}: ${lastMessageContent}`,
+                        body: notificationBody,
                         room_id: data.roomId,
                         message_id: message._id,
                     });
