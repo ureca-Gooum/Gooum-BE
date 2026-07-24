@@ -6,6 +6,7 @@ export interface INotification extends Document {
     title: string;
     body?: string;
     room_id: Types.ObjectId;
+    message_id?: Types.ObjectId; 
     is_read: boolean;
     created_at: Date;
 }
@@ -25,6 +26,7 @@ const notificationSchema = new Schema<INotification>(
             ref: "Room",
             default: undefined,
         },
+        message_id: { type: Schema.Types.ObjectId, ref: "Message", default: undefined },
         is_read: { type: Boolean, default: false },
     },
     {

@@ -35,6 +35,7 @@ export const getNotifications = async (
             title: n.title,
             body: n.body || null,
             roomId: n.room_id?.toString() || null,
+            messageId: n.message_id?.toString() || null, 
             isRead: n.is_read,
             createdAt: n.created_at,
         })),

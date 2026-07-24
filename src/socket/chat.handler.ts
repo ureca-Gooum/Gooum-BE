@@ -189,6 +189,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                             : room?.name || sender?.name || "새 메시지",
                         body: `${sender?.name}: ${lastMessageContent}`,
                         room_id: data.roomId,
+                        message_id: message._id,
                     });
 
                     // 해당 유저에게 실시간 알림 전달
@@ -198,6 +199,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         title: notification.title,
                         body: notification.body,
                         roomId: data.roomId,
+                        messageId: message._id,
                         isRead: false,
                         createdAt: notification.created_at,
                     });
