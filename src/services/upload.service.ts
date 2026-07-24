@@ -8,12 +8,12 @@ export const uploadFile = async (
     file: Express.Multer.File,
     category: string = "chat",
 ) => {
-    if (!env.AZURE_STORAGE_CONNECTION_STRING) {
+    if (!env.AZURE_STORAGE_CONNECTION_STR) {
         throw { statusCode: 500, message: "스토리지 설정이 되어있지 않아요." };
     }
 
     const blobServiceClient = BlobServiceClient.fromConnectionString(
-        env.AZURE_STORAGE_CONNECTION_STRING,
+        env.AZURE_STORAGE_CONNECTION_STR,
     );
     const containerClient = blobServiceClient.getContainerClient(
         env.AZURE_STORAGE_CONTAINER_NAME,
