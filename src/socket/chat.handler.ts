@@ -95,7 +95,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
             data: {
                 roomId: string;
                 content?: any;
-                type: "text" | "image" | "file" | "document";
+                type: "text" | "image" | "file" | "document" | "ai_summary";
                 fileUrl?: string;
                 fileName?: string;
                 documentId?: string;
@@ -129,7 +129,9 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                           ? "사진을 보냈습니다"
                           : data.type === "file"
                             ? "파일을 보냈습니다"
-                            : "문서를 공유했습니다";
+                            : data.type === "ai_summary"
+                              ? "AI 요약을 보냈습니다"
+                              : "문서를 공유했습니다";
 
                 await RoomModel.findByIdAndUpdate(data.roomId, {
                     last_message: {
@@ -165,7 +167,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 for (const member of members) {
                     if (member.user_id.toString() === userId) continue;
 
-                     // 멘션된 유저는 방에 접속 중이어도 알림 보냄
+                    // 멘션된 유저는 방에 접속 중이어도 알림 보냄
                     const isMentioned = mentionSet.has(member.user_id.toString());
 
                     // 채팅방별 알림 설정 체크
@@ -179,16 +181,36 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     );
 
                     // 접속 중이면 알림 안 보냄
-                    if (isInRoom && !isMentioned) continue; 
+                    if (isInRoom && !isMentioned) continue;
+
+                    // 메시지 타입에 따라 알림 타입 결정
+                    let notificationType: "message" | "document" | "mention" = "message";
+                    let notificationTitle = room?.name || sender?.name || "새 메시지";
+
+                    if (isMentioned) {
+                        notificationType = "mention";
+                        notificationTitle = `${sender?.name}님이 회원님을 멘션했어요`;
+                    } else if (data.type === "document") {
+                        notificationType = "document";
+                        notificationTitle = "새 문서가 공유됐어요";
+                    } else if (data.type === "image") {
+                        notificationType = "message";
+                        notificationTitle = `${sender?.name}님이 사진을 보냈어요`;
+                    } else if (data.type === "file") {
+                        notificationType = "message";
+                        notificationTitle = `${sender?.name}님이 파일을 보냈어요`;
+                    } else if (data.type === "ai_summary") {
+                        notificationType = "document";
+                        notificationTitle = `${sender?.name}님이 AI 요약을 보냈어요`;
+                    }
 
                     const notification = await NotificationModel.create({
                         user_id: member.user_id,
-                        type: isMentioned ? "mention" : "message",
-                        title: isMentioned
-                            ? `${sender?.name}님이 회원님을 멘션했어요`
-                            : room?.name || sender?.name || "새 메시지",
+                        type: notificationType,
+                        title: notificationTitle,
                         body: `${sender?.name}: ${lastMessageContent}`,
                         room_id: data.roomId,
+                        message_id: message._id,
                     });
 
                     // 해당 유저에게 실시간 알림 전달
@@ -198,6 +220,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         title: notification.title,
                         body: notification.body,
                         roomId: data.roomId,
+                        messageId: message._id.toString(),
                         isRead: false,
                         createdAt: notification.created_at,
                     });

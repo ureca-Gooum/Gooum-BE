@@ -14,6 +14,7 @@ export const getMessagesHandler = async (
         const cursor = req.query.cursor as string | undefined;
         const search = req.query.search as string | undefined;
         const type = req.query.type as string | undefined;
+        const around = req.query.around as string | undefined;
 
         const result = await getMessages(
             roomId,
