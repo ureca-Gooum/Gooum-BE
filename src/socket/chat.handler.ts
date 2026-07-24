@@ -157,13 +157,22 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
 
                 io.to(data.roomId).emit("newMessage", messageResponse);
 
-                // 알림 생성 + 전달 (발신자 제외)
+                // 알림 생성 — 현재 그 방에 접속 중인 유저는 제외
                 const members = await RoomMemberModel.find({
                     room_id: data.roomId,
                 });
 
                 for (const member of members) {
                     if (member.user_id.toString() === userId) continue;
+
+                    // 해당 유저가 이 방에 접속 중인지 확인
+                    const memberSocketIds = await io.in(member.user_id.toString()).fetchSockets();
+                    const isInRoom = memberSocketIds.some((s: any) =>
+                        s.rooms.has(data.roomId),
+                    );
+
+                    // 접속 중이면 알림 안 보냄
+                    if (isInRoom) continue; 
 
                     const notification = await NotificationModel.create({
                         user_id: member.user_id,
