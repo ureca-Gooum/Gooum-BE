@@ -1,6 +1,5 @@
 import { DocumentModel } from "../models/document.model";
 import { RoomMemberModel } from "../models/room-member.model";
-import { RoomModel } from "../models/room.model";
 import { MessageModel } from "../models/message.model";
 import { UserModel } from "../models/user.model";
 import {
@@ -29,7 +28,7 @@ export const createDocument = async (
         collaboratorIds = members.map((m) => m.user_id.toString());
     }
 
-    // 2. 문서 및 채팅 메시지 생성 (채팅방 문서인 경우 메시지도 작성)
+    // 2. 문서 생성
     const createTasks: Promise<any>[] = [
         DocumentModel.create({
             title: data.title,
@@ -39,16 +38,6 @@ export const createDocument = async (
             collaborators: collaboratorIds,
         }),
     ];
-
-    if (data.roomId) {
-        createTasks.push(
-            MessageModel.create({
-                room_id: data.roomId,
-                sender_id: userId,
-                type: "document",
-            }),
-        );
-    }
 
     const [document] = await Promise.all(createTasks);
 
