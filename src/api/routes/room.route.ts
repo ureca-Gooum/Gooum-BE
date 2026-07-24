@@ -7,6 +7,7 @@ import {
     leaveRoomHandler,
     toggleFavoriteHandler,
     updateRoomHandler,
+    updateRoomNotificationHandler,
 } from "../controllers/room.controller";
 import { authMiddleware } from "../../core/middlewares/auth.middleware";
 
@@ -207,5 +208,37 @@ router.post("/:roomId/members", authMiddleware, addMembersHandler);
  *         description: 멤버가 아님
  */
 router.patch("/:roomId", authMiddleware, updateRoomHandler);
+
+/**
+ * @swagger
+ * /api/rooms/{roomId}/notifications:
+ *   patch:
+ *     tags:
+ *       - Rooms
+ *     summary: 채팅방 알림 설정
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: boolean
+ *               mention:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: 성공
+ */
+router.patch("/:roomId/notifications", authMiddleware, updateRoomNotificationHandler);
 
 export default router;

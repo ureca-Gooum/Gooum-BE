@@ -31,3 +31,11 @@ export const updateRoomSchema = z.object({
 });
 
 export type UpdateRoomDto = z.infer<typeof updateRoomSchema>;
+
+// PATCH /api/rooms/{roomId}/notifications 요청 검증
+export const roomNotificationSchema = z.object({
+    message: z.boolean(),
+    mention: z.boolean(),
+});
+
+export type RoomNotificationDto = z.infer<typeof roomNotificationSchema>;

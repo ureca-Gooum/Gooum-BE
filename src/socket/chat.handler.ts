@@ -165,14 +165,18 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 for (const member of members) {
                     if (member.user_id.toString() === userId) continue;
 
-                    // 해당 유저가 이 방에 접속 중인지 확인
-                    const memberSocketIds = await io.in(member.user_id.toString()).fetchSockets();
-                    const isInRoom = memberSocketIds.some((s: any) =>
+                     // 멘션된 유저는 방에 접속 중이어도 알림 보냄
+                    const isMentioned = mentionSet.has(member.user_id.toString());
+
+                    // 채팅방별 알림 설정 체크
+                    if (isMentioned && !member.notification_settings.mention) continue;
+                    if (!isMentioned && !member.notification_settings.message) continue;
+
+                    // 현재 방에 접속 중이면 알림 안 보냄 (멘션 제외)
+                    const memberSockets = await io.in(member.user_id.toString()).fetchSockets();
+                    const isInRoom = memberSockets.some((s: any) =>
                         s.rooms.has(data.roomId),
                     );
-
-                    // 멘션된 유저는 방에 접속 중이어도 알림 보냄
-                    const isMentioned = mentionSet.has(member.user_id.toString());
 
                     // 접속 중이면 알림 안 보냄
                     if (isInRoom && !isMentioned) continue; 

@@ -322,3 +322,24 @@ export const updateRoom = async (
 
     return await getRoomDetail(roomId, userId);
 };
+
+// 채팅방 알림 설정 수정
+export const updateRoomNotification = async (
+    roomId: string,
+    userId: string,
+    settings: { message: boolean; mention: boolean },
+) => {
+    const membership = await RoomMemberModel.findOne({ room_id: roomId, user_id: userId });
+    if (!membership) throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
+
+    membership.notification_settings = settings;
+    await membership.save();
+
+    return {
+        roomId,
+        notificationSettings: {
+            message: membership.notification_settings.message,
+            mention: membership.notification_settings.mention,
+        },
+    };
+};
