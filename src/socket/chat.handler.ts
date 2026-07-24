@@ -99,6 +99,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                 fileUrl?: string;
                 fileName?: string;
                 documentId?: string;
+                mentions?: string[];
             },
             callback?: Function,
         ) => {
@@ -157,10 +158,9 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
 
                 io.to(data.roomId).emit("newMessage", messageResponse);
 
-                // 알림 생성 — 현재 그 방에 접속 중인 유저는 제외
-                const members = await RoomMemberModel.find({
-                    room_id: data.roomId,
-                });
+                // 알림 생성
+                const members = await RoomMemberModel.find({ room_id: data.roomId });
+                const mentionSet = new Set(data.mentions || []);
 
                 for (const member of members) {
                     if (member.user_id.toString() === userId) continue;
@@ -171,13 +171,18 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         s.rooms.has(data.roomId),
                     );
 
+                    // 멘션된 유저는 방에 접속 중이어도 알림 보냄
+                    const isMentioned = mentionSet.has(member.user_id.toString());
+
                     // 접속 중이면 알림 안 보냄
-                    if (isInRoom) continue; 
+                    if (isInRoom && !isMentioned) continue; 
 
                     const notification = await NotificationModel.create({
                         user_id: member.user_id,
-                        type: "message",
-                        title: room?.name || sender?.name || "새 메시지",
+                        type: isMentioned ? "mention" : "message",
+                        title: isMentioned
+                            ? `${sender?.name}님이 회원님을 멘션했어요`
+                            : room?.name || sender?.name || "새 메시지",
                         body: `${sender?.name}: ${lastMessageContent}`,
                         room_id: data.roomId,
                     });
