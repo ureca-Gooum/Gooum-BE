@@ -11,6 +11,7 @@ export const getMessages = async (
     cursor?: string,
     search?: string,
     type?: string,
+    around?: string,
 ) => {
     // 멤버인지 확인
     const membership = await RoomMemberModel.findOne({
@@ -19,6 +20,63 @@ export const getMessages = async (
     });
     if (!membership)
         throw { statusCode: 403, message: "이 채팅방의 멤버가 아닙니다." };
+
+    // around 모드: 해당 메시지 전후로 불러오기
+    if (around) {
+        const targetMessage = await MessageModel.findById(around);
+        if (!targetMessage) throw { statusCode: 404, message: "메시지를 찾을 수 없어요." };
+
+        const half = Math.floor(limit / 2);
+
+        // 해당 메시지 이전
+        const before = await MessageModel.find({
+            room_id: roomId,
+            created_at: { $lt: targetMessage.created_at },
+        })
+            .sort({ created_at: -1 })
+            .limit(half);
+
+        // 해당 메시지 이후 (자기 자신 포함)
+        const after = await MessageModel.find({
+            room_id: roomId,
+            created_at: { $gte: targetMessage.created_at },
+        })
+            .sort({ created_at: 1 })
+            .limit(half);
+
+        const allMessages = [...before.reverse(), ...after];
+
+        const senderIds = [...new Set(allMessages.map((m) => m.sender_id.toString()))];
+        const senders = await UserModel.find({ _id: { $in: senderIds } });
+        const senderMap = new Map(senders.map((s) => [s._id.toString(), s]));
+
+        const messageList = allMessages.map((m) => {
+            const sender = senderMap.get(m.sender_id.toString());
+            return {
+                messageId: m._id.toString(),
+                roomId: m.room_id.toString(),
+                sender: {
+                    userId: sender?._id.toString(),
+                    name: sender?.name,
+                    profileImageUrl: sender?.profile_image_url || null,
+                },
+                content: m.is_deleted ? null : m.content || null,
+                type: m.type,
+                fileUrl: m.file_url || null,
+                fileName: m.file_name || null,
+                documentId: m.document_id?.toString() || null,
+                isDeleted: m.is_deleted,
+                createdAt: m.created_at,
+            };
+        });
+
+        return {
+            messages: messageList,
+            targetMessageId: around,
+            hasMore: before.length >= half,
+            nextCursor: before.length > 0 ? before[before.length - 1]._id.toString() : null,
+        };
+    }
 
     const filter: any = { room_id: roomId };
 

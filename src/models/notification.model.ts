@@ -5,7 +5,7 @@ export interface INotification extends Document {
     type: "message" | "mention" | "summary";
     title: string;
     body?: string;
-    room_id: Types.ObjectId;
+    room_id?: Types.ObjectId;
     message_id?: Types.ObjectId; 
     is_read: boolean;
     created_at: Date;
