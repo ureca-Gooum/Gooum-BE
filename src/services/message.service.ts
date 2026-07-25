@@ -1,4 +1,5 @@
 import { MessageModel } from "../models/message.model";
+import { NotificationModel } from "../models/notification.model";
 import { RoomMemberModel } from "../models/room-member.model";
 import { RoomModel } from "../models/room.model";
 import { UserModel } from "../models/user.model";
@@ -176,6 +177,12 @@ export const deleteMessage = async (messageId: string, userId: string) => {
             await room.save();
         }
     }
+
+    // 해당 메시지 관련 알림도 업데이트
+    await NotificationModel.updateMany(
+        { message_id: messageId },
+        { body: "삭제된 메시지입니다" },
+    );
 
     return {
         messageId: message._id.toString(),
