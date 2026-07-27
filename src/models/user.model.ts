@@ -36,7 +36,7 @@ const userSchema = new Schema<IUser>(
         presence: {
             status: {
                 type: String,
-                enum: ["online", "away", "offline"],
+                enum: ["online", "away", "offline", "busy"],
                 default: "offline",
             },
             last_seen_at: { type: Date, default: undefined },
