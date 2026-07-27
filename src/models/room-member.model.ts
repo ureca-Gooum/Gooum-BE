@@ -5,6 +5,10 @@ export interface IRoomMember extends Document {
     user_id: Types.ObjectId;
     last_read_at: Date;
     is_favorite: boolean;
+    notification_settings: {
+        message: boolean;
+        mention: boolean;
+    };
     created_at: Date;
 }
 
@@ -14,6 +18,11 @@ const roomMemberSchema = new Schema<IRoomMember>(
         user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
         last_read_at: { type: Date, default: Date.now },
         is_favorite: { type: Boolean, default: false },
+        notification_settings: {
+            message: { type: Boolean, default: true },
+            mention: { type: Boolean, default: true },
+        },
+
     },
     {
         timestamps: { createdAt: "created_at", updatedAt: false },

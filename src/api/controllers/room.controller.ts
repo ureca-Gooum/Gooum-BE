@@ -3,6 +3,7 @@ import {
     addMembersSchema,
     createRoomSchema,
     favoriteSchema,
+    roomNotificationSchema,
     updateRoomSchema,
 } from "../../schemas/room.schema";
 import {
@@ -13,6 +14,7 @@ import {
     leaveRoom,
     toggleFavorite,
     updateRoom,
+    updateRoomNotification,
 } from "../../services/room.service";
 
 export const createRoomHandler = async (
@@ -116,6 +118,16 @@ export const updateRoomHandler = async (
             req.user!.userId,
             name,
         );
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const updateRoomNotificationHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const settings = roomNotificationSchema.parse(req.body);
+        const result = await updateRoomNotification(req.params.roomId, req.user!.userId, settings);
         res.status(200).json(result);
     } catch (err) {
         next(err);

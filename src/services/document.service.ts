@@ -1,6 +1,5 @@
 import { DocumentModel } from "../models/document.model";
 import { RoomMemberModel } from "../models/room-member.model";
-import { RoomModel } from "../models/room.model";
 import { MessageModel } from "../models/message.model";
 import { UserModel } from "../models/user.model";
 import {
@@ -29,7 +28,7 @@ export const createDocument = async (
         collaboratorIds = members.map((m) => m.user_id.toString());
     }
 
-    // 2. 문서 및 채팅 메시지 생성 (채팅방 문서인 경우 메시지도 작성)
+    // 2. 문서 생성
     const createTasks: Promise<any>[] = [
         DocumentModel.create({
             title: data.title,
@@ -39,16 +38,6 @@ export const createDocument = async (
             collaborators: collaboratorIds,
         }),
     ];
-
-    if (data.roomId) {
-        createTasks.push(
-            MessageModel.create({
-                room_id: data.roomId,
-                sender_id: userId,
-                type: "document",
-            }),
-        );
-    }
 
     const [document] = await Promise.all(createTasks);
 
@@ -136,12 +125,13 @@ export const getDocumentDetail = async (documentId: string, userId: string) => {
     if (!isCollaborator)
         throw { statusCode: 403, message: "이 문서에 접근 권한이 없어요." };
 
-    // 협력자 목록과 생성자 정보를 Promise.all로 병렬 조회
     const [collaboratorUsers, createdByUser] = await Promise.all([
         UserModel.find({ _id: { $in: document.collaborators } })
-            .select("name")
+            .select("name profile_image_url")
             .lean(),
-        UserModel.findById(document.created_by).select("name").lean(),
+        UserModel.findById(document.created_by)
+            .select("name profile_image_url")
+            .lean(),
     ]);
 
     return {
@@ -150,13 +140,16 @@ export const getDocumentDetail = async (documentId: string, userId: string) => {
         type: document.type,
         roomId: document.room_id?.toString() || null,
         content: document.content || null,
-        collaborators: collaboratorUsers.map((u) => ({
+        // u.profile_image_url 값을 avatar로 전달
+        collaborators: collaboratorUsers.map((u: any) => ({
             userId: u._id.toString(),
             name: u.name,
+            avatar: u.profile_image_url || null,
         })),
         createdBy: {
             userId: createdByUser?._id.toString(),
             name: createdByUser?.name,
+            avatar: createdByUser?.profile_image_url || null,
         },
         createdAt: document.created_at,
         updatedAt: document.updated_at,
