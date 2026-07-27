@@ -4,6 +4,8 @@ import {
     readAllNotifications,
     readNotification,
 } from "../../services/notification.service";
+import { io } from "../../server";
+import { getUnreadCounts } from "../../socket/chat.handler";
 
 // GET /api/notifications
 export const getNotificationsHandler = async (
@@ -28,10 +30,16 @@ export const readNotificationHandler = async (
     next: NextFunction,
 ) => {
     try {
+        const userId = req.user!.userId;
         const result = await readNotification(
             req.params.notificationId,
             req.user!.userId,
         );
+
+        getUnreadCounts(userId)
+                    .then((counts) => io.to(userId).emit("unreadCount", counts))
+                    .catch((err) => console.error("[Socket] unreadCount 전송 실패:", err));
+
         res.status(200).json(result);
     } catch (err) {
         next(err);
@@ -45,7 +53,14 @@ export const readAllNotificationsHandler = async (
     next: NextFunction,
 ) => {
     try {
+        const userId = req.user!.userId;
         const result = await readAllNotifications(req.user!.userId);
+
+
+        getUnreadCounts(userId)
+                .then((counts) => io.to(userId).emit("unreadCount", counts))
+                .catch((err) => console.error("[Socket] unreadCount 전송 실패:", err));
+
         res.status(200).json(result);
     } catch (err) {
         next(err);

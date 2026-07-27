@@ -20,39 +20,66 @@ const extractText = (content: any): string => {
     return text.slice(0, 50);
 };
 
+// 안 읽은 수 계산 헬퍼 함수 
+export const getUnreadCounts = async (userId: string) => {
+
+    // 1. 읽지 않은 알림 개수
+    const unreadNotificationCount = await NotificationModel.countDocuments({
+        user_id: userId,
+        is_read: false,
+    });
+
+    // 2. 내가 속한 채팅방 목록 가져오기
+    const myMemberships = await RoomMemberModel.find({ user_id: userId }).lean();
+    
+    // 속한 방이 없으면 바로 반환
+    if (myMemberships.length === 0) {
+        return { notifications: unreadNotificationCount, rooms: 0 };
+    }
+
+    // 3. 방별 "마지막 읽은 시간 이후의 메시지" 조건들을 배열로 생성
+    const roomConditions = myMemberships.map((m) => ({
+        room_id: m.room_id,
+        created_at: { $gt: m.last_read_at },
+    }));
+
+    // 4. 안 읽은 메시지가 존재하는 방 ID들을 중복 없이 추출 ($or 사용)
+    const unreadRoomIds = await MessageModel.distinct("room_id", {
+        $or: roomConditions,
+    });
+
+    return { 
+        notifications: unreadNotificationCount, 
+        rooms: unreadRoomIds.length 
+    };
+};
+
 export const handleChat = (io: SocketIOServer, socket: Socket) => {
     const userId = (socket as any).userId;
 
     // 1. 채팅방 입장
-    socket.on(
-        "joinRoom",
-        async (data: { roomId: string }, callback?: Function) => {
-            try {
-                socket.join(data.roomId);
+    socket.on("joinRoom", async (data: { roomId: string }, callback?: Function) => {
+        try {
+            socket.join(data.roomId);
 
-                if (userId) {
-                    await RoomMemberModel.findOneAndUpdate(
-                        {
-                            room_id: data.roomId,
-                            user_id: userId,
-                        },
-                        {
-                            last_read_at: new Date(),
-                        },
-                    );
-                }
+            if (userId) {
+                await RoomMemberModel.findOneAndUpdate(
+                    { room_id: data.roomId, user_id: userId },
+                    { last_read_at: new Date() },
+                );
 
-                console.log(`[socket] ${socket.id}가 ${data.roomId}에 입장`);
-                callback?.({ success: true });
-            } catch (err) {
-                console.error("[socket] joinRoom 에러: ", err);
-                callback?.({
-                    success: false,
-                    message: "채팅방 입장에 실패했어요.",
-                });
+                // 갱신된 unreadCount 전달
+                const counts = await getUnreadCounts(userId);
+                socket.emit("unreadCount", counts);
             }
-        },
-    );
+
+            console.log(`[socket] ${socket.id}가 ${data.roomId}에 입장`);
+            callback?.({ success: true });
+        } catch (err) {
+            console.error("[socket] joinRoom 에러:", err);
+            callback?.({ success: false, message: "채팅방 입장에 실패했어요." });
+        }
+    });
 
     // 2. 채팅방 화면 이탈 (단순 탭 이동/뒤로가기)
     socket.on(
@@ -238,6 +265,10 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         isRead: false,
                         createdAt: notification.created_at,
                     });
+
+                    // 상대방 unreadCount 갱신
+                    const memberCounts = await getUnreadCounts(member.user_id.toString());
+                    io.to(member.user_id.toString()).emit("unreadCount", memberCounts);
                 }
 
                 callback?.({
@@ -321,12 +352,9 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     "presence.last_seen_at": new Date(),
                 });
 
-                // 안 읽은 알림 수 전달
-                NotificationModel.countDocuments({
-                    user_id: userId,
-                    is_read: false,
-                }).then((unreadCount) => {
-                    socket.emit("unreadCount", { unreadCount });
+                // unreadCount 전달
+                getUnreadCounts(userId).then((counts) => {
+                    socket.emit("unreadCount", counts);
                 }).catch(() => {});
 
                 // 내가 속한 모든 채팅방 멤버들에게 "나 온라인 됐다"고 알림
