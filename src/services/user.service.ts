@@ -10,6 +10,7 @@ const toMyProfileResponse = (user: IUser) => ({
     presence: {
         status: user.presence?.status || "offline",
         lastSeenAt: user.presence?.last_seen_at || null,
+        manualStatus: user.presence?.manual_status || null,
     },
     notificationSettings: {
         message: user.notification_settings?.message ?? true,
@@ -55,6 +56,8 @@ export const updateMe = async (userId: string, data: UpdateUserDto) => {
         updateData.notification_settings = data.notificationSettings;
     if (data.presence) {
         updateData["presence.status"] = data.presence.status;
+        // 프로필에서 명시적으로 고른 값이므로 자동 복원 기준(manual_status)에도 같이 반영
+        updateData["presence.manual_status"] = data.presence.status;
         updateData["presence.last_seen_at"] = new Date();
     }
 
