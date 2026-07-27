@@ -1,8 +1,10 @@
 import { Schema, model, Document } from "mongoose";
 
 interface IPresence {
-    status: "online" | "away" | "offline";
+    status: "online" | "away" | "busy" | "offline";
     last_seen_at?: Date;
+    // 프로필에서 명시적으로 고른 상태만 저장 (재접속 시 복원 기준, status와 달리 자동으로는 안 바뀜)
+    manual_status?: "online" | "away" | "busy" | "offline";
 }
 
 interface INotificationSettings {
@@ -40,6 +42,11 @@ const userSchema = new Schema<IUser>(
                 default: "offline",
             },
             last_seen_at: { type: Date, default: undefined },
+            manual_status: {
+                type: String,
+                enum: ["online", "away", "offline", "busy"],
+                default: undefined,
+            },
         },
         notification_settings: {
             message: { type: Boolean, default: true },

@@ -57,6 +57,31 @@ export const getUnreadCounts = async (userId: string) => {
     };
 };
 
+// room_id로 emit하면 그 방을 안 열어본 멤버는 못 받으니, 유저ID 기준으로 직접 emit한다
+const broadcastPresenceToRoomMembers = async (
+    io: SocketIOServer,
+    userId: string,
+    status: string,
+    lastSeenAt: Date,
+) => {
+    const myRooms = await RoomMemberModel.find({ user_id: userId }).lean();
+    if (myRooms.length === 0) return;
+
+    const roomIds = myRooms.map((r) => r.room_id);
+
+    const otherMembers = await RoomMemberModel.find({
+        room_id: { $in: roomIds },
+        user_id: { $ne: userId },
+    }).lean();
+
+    // 같은 유저가 여러 방에 겹쳐 있어도 한 번만 보내도록 중복 제거
+    const targetUserIds = new Set(otherMembers.map((m) => m.user_id.toString()));
+
+    for (const targetUserId of targetUserIds) {
+        io.to(targetUserId).emit("presenceChanged", { userId, status, lastSeenAt });
+    }
+};
+
 export const handleChat = (io: SocketIOServer, socket: Socket) => {
     const userId = (socket as any).userId;
 
@@ -337,20 +362,14 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
             callback?: Function,
         ) => {
             try {
+                const now = new Date();
                 await UserModel.findByIdAndUpdate(userId, {
                     "presence.status": data.status,
-                    "presence.last_seen_at": new Date(),
+                    "presence.last_seen_at": now,
                 });
 
-                // 내가 속한 모든 채팅방 멤버들에게 알림
-                const myRooms = await RoomMemberModel.find({ user_id: userId });
-                for (const room of myRooms) {
-                    socket.to(room.room_id.toString()).emit("presenceChanged", {
-                        userId: userId,
-                        status: data.status,
-                        lastSeenAt: new Date(),
-                    });
-                }
+                // 내가 속한 방들의 다른 멤버들에게 상태 변경 전달 (그 방을 지금 열어봤는지와 무관하게)
+                await broadcastPresenceToRoomMembers(io, userId, data.status, now);
 
                 callback?.({ success: true });
             } catch (err) {
@@ -385,15 +404,8 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     });
                 }
 
-                // 3) away이든 online이든 현재 확정된 상태를 내 모든 방에 전파
-                const myRooms = await RoomMemberModel.find({ user_id: userId });
-                for (const room of myRooms) {
-                    io.to(room.room_id.toString()).emit("presenceChanged", {
-                        userId: userId,
-                        status: currentStatus,
-                        lastSeenAt: new Date(),
-                    });
-                }
+                // 3) away이든 online이든 현재 확정된 상태를 내가 속한 방들의 다른 멤버들에게 전파
+                await broadcastPresenceToRoomMembers(io, userId, currentStatus, new Date());
 
                 // 4) unreadCount 전달
                 const counts = await getUnreadCounts(userId);
@@ -427,14 +439,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                             "presence.last_seen_at": now,
                         });
 
-                        const myRooms = await RoomMemberModel.find({ user_id: userId });
-                        for (const room of myRooms) {
-                            io.to(room.room_id.toString()).emit("presenceChanged", {
-                                userId: userId,
-                                status: "offline",
-                                lastSeenAt: now,
-                            });
-                        }
+                        await broadcastPresenceToRoomMembers(io, userId, "offline", now);
                     } catch (err) {
                         console.error("[socket] disconnect 프레즌스 에러:", err);
                     }
