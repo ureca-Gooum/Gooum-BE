@@ -4,6 +4,7 @@ import { MessageModel } from "../models/message.model";
 import { UserModel } from "../models/user.model";
 import { RoomModel } from "../models/room.model";
 import { NotificationModel } from "../models/notification.model";
+import { Types } from "mongoose";
 
 const userSockets = new Map<string, Set<string>>();
 
@@ -70,6 +71,12 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     { last_read_at: new Date() },
                 );
 
+                // 해당 방과 관련된 안 읽은 알림들을 '읽음(is_read: true)' 처리
+                await NotificationModel.updateMany(
+                { room_id: data.roomId, user_id: userId, is_read: false },
+                { $set: { is_read: true } }
+                );
+
                 // 갱신된 unreadCount 전달
                 const counts = await getUnreadCounts(userId);
                 socket.emit("unreadCount", counts);
@@ -99,6 +106,16 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         { last_read_at: new Date() },
                     );
                 }
+
+                // 퇴장 시점까지 생성된 알림도 모두 읽음 처리
+                await NotificationModel.updateMany(
+                    { room_id: data.roomId, user_id: userId, is_read: false },
+                    { $set: { is_read: true } }
+                );
+
+                // 갱신된 unreadCount 전송
+                const counts = await getUnreadCounts(userId);
+                socket.emit("unreadCount", counts);
 
                 console.log(
                     `[socket] 유저(${userId}) / 소켓(${socket.id})이 ${data.roomId} 화면 이탈`,
@@ -183,6 +200,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     fileUrl: message.file_url || null,
                     fileName: message.file_name || null,
                     documentId: message.document_id?.toString() || null,
+                    reactions: [], 
                     isDeleted: false,
                     createdAt: message.created_at,
                 };
@@ -422,6 +440,73 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                     }
                 }
             }, 300); // 300ms 타임아웃 지연
+        }
+    });
+
+    // 리액션 추가/제거 (토글)
+    socket.on("addReaction", async (data: {
+        messageId: string;
+        emoji: string;
+    }, callback?: Function) => {
+        if (!userId) {
+            callback?.({ success: false, message: "인증이 필요합니다." });
+            return;
+        }
+
+        try {
+            const message = await MessageModel.findById(data.messageId);
+            if (!message) {
+                callback?.({ success: false, message: "메시지를 찾을 수 없어요." });
+                return;
+            }
+
+            const existingReaction = message.reactions.find(
+                (r) => r.emoji === data.emoji,
+            );
+
+            if (existingReaction) {
+                const userIndex = existingReaction.user_ids.findIndex(
+                    (id) => id.toString() === userId,
+                );
+
+                if (userIndex > -1) {
+                    // 이미 눌렀으면 제거 (토글)
+                    existingReaction.user_ids.splice(userIndex, 1);
+                    if (existingReaction.user_ids.length === 0) {
+                        message.reactions = message.reactions.filter(
+                            (r) => r.emoji !== data.emoji,
+                        );
+                    }
+                } else {
+                    // 안 눌렀으면 추가
+                    existingReaction.user_ids.push(new Types.ObjectId(userId));
+                }
+            } else {
+                // 새 이모지 리액션 생성
+                message.reactions.push({
+                    emoji: data.emoji,
+                    user_ids: [new Types.ObjectId(userId)],
+                });
+            }
+
+            await message.save();
+
+            // 같은 방 모든 유저에게 리액션 업데이트 전달
+            const reactionsResponse = message.reactions.map((r) => ({
+                emoji: r.emoji,
+                userIds: r.user_ids.map((id) => id.toString()),
+                count: r.user_ids.length,
+            }));
+
+            io.to(message.room_id.toString()).emit("reactionUpdated", {
+                messageId: data.messageId,
+                reactions: reactionsResponse,
+            });
+
+            callback?.({ success: true });
+        } catch (err) {
+            console.error("[socket] addReaction 에러:", err);
+            callback?.({ success: false, message: "리액션 처리에 실패했어요." });
         }
     });
 };

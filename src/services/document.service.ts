@@ -125,12 +125,13 @@ export const getDocumentDetail = async (documentId: string, userId: string) => {
     if (!isCollaborator)
         throw { statusCode: 403, message: "이 문서에 접근 권한이 없어요." };
 
-    // 협력자 목록과 생성자 정보를 Promise.all로 병렬 조회
     const [collaboratorUsers, createdByUser] = await Promise.all([
         UserModel.find({ _id: { $in: document.collaborators } })
-            .select("name")
+            .select("name profile_image_url")
             .lean(),
-        UserModel.findById(document.created_by).select("name").lean(),
+        UserModel.findById(document.created_by)
+            .select("name profile_image_url")
+            .lean(),
     ]);
 
     return {
@@ -139,13 +140,16 @@ export const getDocumentDetail = async (documentId: string, userId: string) => {
         type: document.type,
         roomId: document.room_id?.toString() || null,
         content: document.content || null,
-        collaborators: collaboratorUsers.map((u) => ({
+        // u.profile_image_url 값을 avatar로 전달
+        collaborators: collaboratorUsers.map((u: any) => ({
             userId: u._id.toString(),
             name: u.name,
+            avatar: u.profile_image_url || null,
         })),
         createdBy: {
             userId: createdByUser?._id.toString(),
             name: createdByUser?.name,
+            avatar: createdByUser?.profile_image_url || null,
         },
         createdAt: document.created_at,
         updatedAt: document.updated_at,
