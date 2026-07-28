@@ -13,6 +13,11 @@ const extractText = (content: any): string => {
     if (!content) return "";
     if (typeof content === "string") return content;
 
+    // 멘션 노드는 text 필드가 없고 attrs.label에 이름이 들어있음 (Tiptap Mention)
+    if (content.type === "mention") {
+        return content.attrs?.label ? `@${content.attrs.label}` : "";
+    }
+
     let text = "";
     if (content.text) text += content.text;
     if (content.content) {
@@ -285,9 +290,7 @@ export const handleChat = (io: SocketIOServer, socket: Socket) => {
                         notificationTitle = `${sender?.name}님이 AI 요약을 보냈어요`;
                     }
 
-                    const notificationBody = isMentioned 
-                        ? `${sender?.name || '알 수 없음'}: @${member_name} ${lastMessageContent}`
-                        : `${sender?.name || '알 수 없음'}: ${lastMessageContent}`;
+                    const notificationBody = lastMessageContent;
                     
                     // DB 저장 및 실시간 알림 전송
                     const notification = await NotificationModel.create({
