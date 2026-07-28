@@ -1,4 +1,5 @@
 import { MessageModel } from "../models/message.model";
+import { NotificationModel } from "../models/notification.model";
 import { RoomMemberModel } from "../models/room-member.model";
 import { RoomModel } from "../models/room.model";
 import { UserModel } from "../models/user.model";
@@ -220,6 +221,9 @@ export const leaveRoom = async (roomId: string, userId: string) => {
         throw { statusCode: 404, message: "채팅방을 찾을 수 없어요." };
 
     await RoomMemberModel.deleteOne({ room_id: roomId, user_id: userId });
+
+    // 이 방에서 온 내 알림도 함께 삭제 (더 이상 접근 불가한 방이므로)
+    await NotificationModel.deleteMany({ room_id: roomId, user_id: userId });
 
     // 남은 멤버 확인
     const remaining = await RoomMemberModel.countDocuments({ room_id: roomId });
