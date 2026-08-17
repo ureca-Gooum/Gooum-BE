@@ -1,8 +1,44 @@
+import { Types } from "mongoose";
 import { MessageModel } from "../models/message.model";
 import { NotificationModel } from "../models/notification.model";
 import { RoomMemberModel } from "../models/room-member.model";
 import { RoomModel } from "../models/room.model";
 import { UserModel } from "../models/user.model";
+
+// 에디터 JSON에서 텍스트만 추출 (last_message용)
+const extractText = (content: any): string => {
+    if (!content) return "";
+    if (typeof content === "string") return content;
+
+    // 멘션 노드는 text 필드가 없고 attrs.label에 이름이 들어있음 (Tiptap Mention)
+    if (content.type === "mention") {
+        return content.attrs?.label ? `@${content.attrs.label}` : "";
+    }
+
+    let text = "";
+    if (content.text) text += content.text;
+    if (content.content) {
+        for (const child of content.content) {
+            text += extractText(child);
+        }
+    }
+    return text.slice(0, 50);
+};
+
+const buildLastMessageContent = (data: { type: string; content?: any }) => {
+    switch (data.type) {
+        case "text":
+            return extractText(data.content);
+        case "image":
+            return "사진을 보냈습니다";
+        case "file":
+            return "파일을 보냈습니다";
+        case "ai_summary":
+            return "AI 요약을 보냈습니다";
+        default:
+            return "문서를 공유했습니다";
+    }
+};
 
 // 메시지 기록 조회
 export const getMessages = async (
@@ -188,5 +224,111 @@ export const deleteMessage = async (messageId: string, userId: string) => {
         messageId: message._id.toString(),
         roomId: message.room_id.toString(),
         isDeleted: true,
+    };
+};
+
+// 메시지 생성 - 소켓 sendMessage에서 사용
+export const createMessage = async (
+    userId: string,
+    data: {
+        roomId: string;
+        content?: any;
+        type: "text" | "image" | "file" | "document" | "ai_summary";
+        fileUrl?: string;
+        fileName?: string;
+        documentId?: string;
+    },
+) => {
+    const message = await MessageModel.create({
+        room_id: data.roomId,
+        sender_id: userId,
+        content: data.content || undefined,
+        type: data.type,
+        file_url: data.fileUrl || undefined,
+        file_name: data.fileName || undefined,
+        document_id: data.documentId || undefined,
+    });
+
+    const sender = await UserModel.findById(userId);
+    const lastMessageContent = buildLastMessageContent(data);
+
+    const room = await RoomModel.findByIdAndUpdate(
+        data.roomId,
+        {
+            last_message: {
+                content: lastMessageContent,
+                sender_id: userId,
+                sent_at: new Date(),
+            },
+        },
+        { new: true },
+    );
+
+    const messageResponse = {
+        messageId: message._id.toString(),
+        roomId: data.roomId,
+        sender: {
+            userId: sender?._id.toString(),
+            name: sender?.name,
+            profileImageUrl: sender?.profile_image_url || null,
+        },
+        content: message.content || null,
+        type: message.type,
+        fileUrl: message.file_url || null,
+        fileName: message.file_name || null,
+        documentId: message.document_id?.toString() || null,
+        reactions: [],
+        isDeleted: false,
+        createdAt: message.created_at,
+    };
+
+    return { message, sender, room, lastMessageContent, messageResponse };
+};
+
+// 리액션 토글 (추가/제거) - 소켓 addReaction에서 사용
+export const toggleReaction = async (
+    messageId: string,
+    userId: string,
+    emoji: string,
+) => {
+    const message = await MessageModel.findById(messageId);
+    if (!message) throw { statusCode: 404, message: "메시지를 찾을 수 없어요." };
+
+    const existingReaction = message.reactions.find((r) => r.emoji === emoji);
+
+    if (existingReaction) {
+        const userIndex = existingReaction.user_ids.findIndex(
+            (id) => id.toString() === userId,
+        );
+
+        if (userIndex > -1) {
+            // 이미 눌렀으면 제거 (토글)
+            existingReaction.user_ids.splice(userIndex, 1);
+            if (existingReaction.user_ids.length === 0) {
+                message.reactions = message.reactions.filter(
+                    (r) => r.emoji !== emoji,
+                );
+            }
+        } else {
+            // 안 눌렀으면 추가
+            existingReaction.user_ids.push(new Types.ObjectId(userId));
+        }
+    } else {
+        // 새 이모지 리액션 생성
+        message.reactions.push({
+            emoji,
+            user_ids: [new Types.ObjectId(userId)],
+        });
+    }
+
+    await message.save();
+
+    return {
+        roomId: message.room_id.toString(),
+        reactions: message.reactions.map((r) => ({
+            emoji: r.emoji,
+            userIds: r.user_ids.map((id) => id.toString()),
+            count: r.user_ids.length,
+        })),
     };
 };
