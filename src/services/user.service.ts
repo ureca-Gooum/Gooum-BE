@@ -93,3 +93,28 @@ export const getUserById = async (userId: string) => {
     if (!user) throw { statusCode: 404, message: "유저를 찾을 수 없어요." };
     return toPublicProfileResponse(user);
 };
+
+// presence 상태 변경 - 소켓 연결/해제/updatePresence에서 사용
+export const setPresence = async (
+    userId: string,
+    status: "online" | "away" | "busy" | "offline",
+) => {
+    const now = new Date();
+    await UserModel.findByIdAndUpdate(userId, {
+        "presence.status": status,
+        "presence.last_seen_at": now,
+    });
+    return now;
+};
+
+// 현재 presence 상태만 조회 - 소켓 연결 시 오프라인→온라인 전환 판단에 사용
+export const getPresenceStatus = async (userId: string) => {
+    const user = await UserModel.findById(userId).select("presence").lean();
+    return user?.presence?.status || "online";
+};
+
+// 이름만 조회 - 소켓 typing 이벤트에서 사용
+export const getUserName = async (userId: string) => {
+    const user = await UserModel.findById(userId).select("name").lean();
+    return user?.name || "알 수 없음";
+};

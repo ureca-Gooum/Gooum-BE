@@ -1,4 +1,6 @@
 import { NotificationModel } from "../models/notification.model";
+import { RoomMemberModel } from "../models/room-member.model";
+import { MessageModel } from "../models/message.model";
 
 // 내 알림 목록 조회
 export const getNotifications = async (
@@ -77,5 +79,70 @@ export const readAllNotifications = async (userId: string) => {
     return {
         message: "모든 알림을 읽음 처리했어요.",
         updatedCount: result.modifiedCount,
+    };
+};
+
+// 안 읽은 알림 수 + 안 읽은 메시지가 있는 채팅방 수
+export const getUnreadCounts = async (userId: string) => {
+    const unreadNotificationCount = await NotificationModel.countDocuments({
+        user_id: userId,
+        is_read: false,
+    });
+
+    const myMemberships = await RoomMemberModel.find({ user_id: userId }).lean();
+    if (myMemberships.length === 0) {
+        return { notifications: unreadNotificationCount, rooms: 0 };
+    }
+
+    const roomConditions = myMemberships.map((m) => ({
+        room_id: m.room_id,
+        created_at: { $gt: m.last_read_at },
+    }));
+
+    const unreadRoomIds = await MessageModel.distinct("room_id", {
+        $or: roomConditions,
+    });
+
+    return {
+        notifications: unreadNotificationCount,
+        rooms: unreadRoomIds.length,
+    };
+};
+
+// 특정 채팅방에서 온 안 읽은 알림 읽음 처리 (입장/이탈 시)
+export const markRoomNotificationsRead = async (roomId: string, userId: string) => {
+    await NotificationModel.updateMany(
+        { room_id: roomId, user_id: userId, is_read: false },
+        { $set: { is_read: true } },
+    );
+};
+
+// 새 메시지/멘션 알림 생성
+export const createMessageNotification = async (data: {
+    userId: string;
+    type: "message" | "document" | "mention";
+    title: string;
+    body: string;
+    roomId: string;
+    messageId: string;
+}) => {
+    const notification = await NotificationModel.create({
+        user_id: data.userId,
+        type: data.type,
+        title: data.title,
+        body: data.body,
+        room_id: data.roomId,
+        message_id: data.messageId,
+    });
+
+    return {
+        notificationId: notification._id.toString(),
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        roomId: data.roomId,
+        messageId: data.messageId,
+        isRead: false,
+        createdAt: notification.created_at,
     };
 };

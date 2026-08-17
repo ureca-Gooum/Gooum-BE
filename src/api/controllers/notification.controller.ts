@@ -3,9 +3,9 @@ import {
     getNotifications,
     readAllNotifications,
     readNotification,
+    getUnreadCounts,
 } from "../../services/notification.service";
 import { io } from "../../server";
-import { getUnreadCounts } from "../../socket/chat.handler";
 
 // GET /api/notifications
 export const getNotificationsHandler = async (

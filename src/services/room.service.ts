@@ -327,6 +327,34 @@ export const updateRoom = async (
     return await getRoomDetail(roomId, userId);
 };
 
+// 방 읽음 처리 (last_read_at 갱신) - 소켓 joinRoom/leaveRoom에서 사용
+export const markRoomAsRead = async (roomId: string, userId: string) => {
+    await RoomMemberModel.findOneAndUpdate(
+        { room_id: roomId, user_id: userId },
+        { last_read_at: new Date() },
+    );
+};
+
+// 특정 방의 멤버 전체 조회 (알림 설정 포함) - 소켓 sendMessage 알림 분기에서 사용
+export const getRoomMembers = async (roomId: string) => {
+    return await RoomMemberModel.find({ room_id: roomId });
+};
+
+// 내가 속한 모든 방의 다른 멤버 유저ID 목록 (중복 제거) - 소켓 presence 브로드캐스트에서 사용
+export const getOtherMembersInMyRooms = async (userId: string) => {
+    const myRooms = await RoomMemberModel.find({ user_id: userId }).lean();
+    if (myRooms.length === 0) return [];
+
+    const roomIds = myRooms.map((r) => r.room_id);
+
+    const otherMembers = await RoomMemberModel.find({
+        room_id: { $in: roomIds },
+        user_id: { $ne: userId },
+    }).lean();
+
+    return Array.from(new Set(otherMembers.map((m) => m.user_id.toString())));
+};
+
 // 채팅방 알림 설정 수정
 export const updateRoomNotification = async (
     roomId: string,
